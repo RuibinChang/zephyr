@@ -135,6 +135,16 @@
 			interrupt-parent = <&intc>;
 			#gpio-cells = <2>;
 		};
+		kscan0: kscan@F01D00 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "ite,it8xxx2-kscan";
+			reg = <0x00F01D00 0x29>;
+			label = "KSCAN";
+			interrupt-parent = <&intc>;
+			interrupts = <13 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
 		spi0:spi@f02600  {
 			#address-cells = <1>;
 			#size-cells = <0>;
