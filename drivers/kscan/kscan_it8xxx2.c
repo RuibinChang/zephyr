@@ -100,6 +100,8 @@ static void drive_keyboard_column(int col)
 	/* restore interrupts */
 	irq_unlock(key); //set_int_mask(int_mask);
 
+	printk("drive_kb_col : %d (0~15 SingleHigh, -1 ALLHigh, -2 ALLLow)\n", col);
+
 	#if 0 				/*seems not same with ITE*/
 	if (data == KEYBOARD_COLUMN_DRIVE_ALL) {
 		/* KSO output controlled by the KSO_SELECT field */
@@ -183,6 +185,7 @@ static bool read_keyboard_matrix(uint8_t *new_state)
 		row = read_keyboard_row();
 		new_state[col] = row;
 
+		printk("new_state[%d (col)] = 0x%x (row)\n", col, new_state[col]);
 		key_event |= row;
 	}
 
@@ -198,10 +201,19 @@ static void keyboard_raw_interrupt(const void *arg)
 {
 	ARG_UNUSED(arg);
 
+	printk("KBS Interrupt fired\n");
+
+	//check status
+	printk("INT WUESR3 = 0x%x, ISR1 = 0x%x(bit5)\n", WUESR3, ISR1);
+
 	WUESR3 = 0xFF;
 	ite_intc_isr_clear(IT83XX_IRQ_WKINTC); //task_clear_pending_irq(IT83XX_IRQ_WKINTC);
 	//irq_disable(IT83XX_IRQ_WKINTC/*DT_INST_IRQN(0)*/);		   /*After INT fired, poll task not dis ISR, so MicroChip dsiable ISR do in here. I move to poll task same as chrome*/ 
 	k_sem_give(&kbd_data.poll_lock); // = task_set_event(XXX)
+
+	//check status
+	printk("INT WUESR3 = 0x%x, ISR1 = 0x%x(bit5)\n", WUESR3, ISR1);
+
 	LOG_DBG(" ");
 }
 
@@ -210,12 +222,18 @@ static void keyboard_raw_interrupt(const void *arg)
  */
 void keyboard_raw_enable_interrupt(int enable)
 {
+	//check status
+	printk("en/dis %d, WUESR3 = 0x%x, ISR1 = 0x%x(bit5)\n", enable, WUESR3, ISR1);
+
 	if (enable) {
 		WUESR3 = 0xFF;
 		ite_intc_isr_clear(IT83XX_IRQ_WKINTC); //task_clear_pending_irq(IT83XX_IRQ_WKINTC);
 		irq_enable(IT83XX_IRQ_WKINTC); //task_enable_irq(IT83XX_IRQ_WKINTC);
 	} else
 		irq_disable(IT83XX_IRQ_WKINTC); //task_disable_irq(IT83XX_IRQ_WKINTC);
+
+	//check status
+	printk("en/dis %d, WUESR3 = 0x%x, ISR1 = 0x%x(bit5)\n", enable, WUESR3, ISR1);
 }
 
 static bool check_key_events(const struct device *dev)
@@ -234,6 +252,7 @@ static bool check_key_events(const struct device *dev)
 
 	/* Abort if ghosting is detected */
 	if (is_matrix_ghosting(matrix_new_state)) {
+		printk("ghosting is detected\n");
 		return false;
 	}
 
@@ -263,6 +282,8 @@ static bool check_key_events(const struct device *dev)
 		kbd_data.matrix_unstable_state[c] |= row_changed;
 		kbd_data.matrix_previous_state[c] = matrix_new_state[c];
 	}
+
+	printk("checking1\n");
 
 	for (int c = 0; c < MAX_MATRIX_KEY_COLS; c++) {
 		deb_col = kbd_data.matrix_unstable_state[c];
@@ -310,8 +331,10 @@ static bool check_key_events(const struct device *dev)
 				//	      row_bit ? true : false); /*excute which function? maybe notify host function*/				
 			}
 		}
+		printk("checking2\n");
 	}
 
+	printk("key_pressed = 0x%x\n", key_pressed);
 	return key_pressed;
 }
 
@@ -345,6 +368,8 @@ void polling_task(void *dummy1, void *dummy2, void *dummy3)
 
 		/* Ignore isr when releasing a key as we are polling */
 		//MCHP_GIRQ_SRC(MCHP_KSCAN_GIRQ) = BIT(MCHP_KSCAN_GIRQ_POS); //?
+		printk("poll task running\n");
+		printk("KSOL = 0x%x, KSOH1 = 0x%x\n", KSOL, KSOH1);
 
 		drive_keyboard_column(KEYBOARD_COLUMN_DRIVE_ALL); /*Last KSO status is ALL output high, KSO high to low change somehow don't know will triger KSI INT (measured Low pulse on KSI pin), so do before INT_EN*/
 		keyboard_raw_enable_interrupt(1);
@@ -355,15 +380,19 @@ void polling_task(void *dummy1, void *dummy2, void *dummy3)
 
 		while (atomic_get(&kbd_data.enable_scan) == 1U) {
 			uint32_t start_period_cycles = k_cycle_get_32();
+			printk("start_period_cycles : %u\n", start_period_cycles);
 
 			if (check_key_events(DEVICE_GET(kscan_it8xxx2))) {
 				local_poll_timeout = kbd_data.poll_timeout;
 				start_poll_cycles = k_cycle_get_32();
+				printk("start_poll_cycles : %u\n", start_poll_cycles);
 			} else if (poll_expired(start_poll_cycles,
 					      &local_poll_timeout)) {
+				printk("timeout expired\n");
 				break;
 			}
 
+			printk("check done / timeout not yet\n");
 
 			/* Subtract the time invested from the sleep period
 			 * in order to compensate for the time invested
@@ -384,9 +413,11 @@ void polling_task(void *dummy1, void *dummy2, void *dummy3)
 			 */
 			if (wait_period > kbd_data.poll_period) {
 				LOG_DBG("wait_period : %u", wait_period);
+				printk("sleep wait time : %u\n", wait_period);
 
 				wait_period = kbd_data.poll_period;
 			}
+			printk("task sleep\n");
 
 			/* Allow other threads to run while we sleep */
 			k_usleep(wait_period);
@@ -400,6 +431,7 @@ void polling_task(void *dummy1, void *dummy2, void *dummy3)
 static int kscan_it8xxx2_init(const struct device *dev)
 {
 	unsigned int key;
+	uint8_t x, y;
 
 	ARG_UNUSED(dev);
 
@@ -477,6 +509,10 @@ static int kscan_it8xxx2_init(const struct device *dev)
 
 	/* Interrupts are enabled in the thread function */
 	IRQ_CONNECT(IT83XX_IRQ_WKINTC/*MCHP_KSAN_NVIC*/, 0, keyboard_raw_interrupt/*scan_matrix_xec_isr*/, NULL, 0);
+
+	x = KSOCTRL;
+	y = KSICTRL;
+	printk("Init KBS KSOCTRL = 0x%x(0x5), KSICTRL = 0x%x(0x4)\n", x, y);
 
 	return 0;
 }

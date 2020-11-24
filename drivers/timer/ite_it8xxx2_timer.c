@@ -57,7 +57,7 @@ enum _EXT_TIMER_IDX_ {
 static void ite_timer_reload(uint8_t idx, uint32_t cnt)
 {
 	/* timer_start */
-	sys_set_bit((EXT_CTL_B + REG_ADDR_OFFSET(idx)), 0);
+	sys_set_bit((EXT_CTL_B + REG_ADDR_OFFSET(idx)), 0); //error? should stop then set count
 	sys_write8(((cnt >> 24) & 0xFF), (EXT_LH3R_B + REG_ADDR_OFFSET(idx)));
 	sys_write8(((cnt >> 16) & 0xFF), (EXT_LH2R_B + REG_ADDR_OFFSET(idx)));
 	sys_write8(((cnt >> 8) & 0xFF), (EXT_LHR_B + REG_ADDR_OFFSET(idx)));
@@ -89,6 +89,7 @@ static void ite_timer_clear_flag(uint8_t idx)
 static int timer_init(uint8_t idx, uint8_t psr, uint8_t initial_state,
 	       uint8_t enable_isr, uint32_t cnt)
 {
+	printk("init timer %d (+3)\n", idx);
 	/* Setup Triggered Mode -> Rising-Edge Trig. */
 	if (idx != EXT_TIMER_8) {
 		IELMR19 |= BIT(3 + idx);
@@ -171,7 +172,11 @@ static void timer_init_combine(uint8_t idx, uint8_t bEnable)
 
 static uint32_t get_timer_combine_count(uint8_t idx)
 {
-	return sys_read32(EXT_CNTO_B + ((IDX_SHIFT(idx, 1, 1) + 1) * 4));
+	uint32_t cnt = sys_read32(EXT_CNTO_B + ((IDX_SHIFT(idx, 1, 1) + 1) * 4));
+
+	//printk("timer %d(+4) cnt = %d\n", idx, cnt);
+
+	return cnt;
 }
 
 static void timer_count_reset(uint8_t idx, uint32_t cnt)
@@ -207,7 +212,11 @@ static void timer_isr(const void *unused)
 int sys_clock_driver_init(const struct device *dev)
 {
 	timer_init_combine(CTIMER_HW_TIMER_INDEX, TRUE);
-	timer_init(CTIMER_HW_TIMER_INDEX, ET_PSR_32K, TRUE, FALSE, 0);
+	/* Free run timer4 will overflow at 71min */
+	/* TODO: add timer4 INT when overflow => high word + 1 (same as google) */
+	timer_init(EXT_TIMER_4, ET_PSR_8M, FALSE, FALSE, 0xffffffff);
+	/* Free run timer3 overflow every 1us, then trigger timer4 obser++ */
+	timer_init(CTIMER_HW_TIMER_INDEX, ET_PSR_8M, TRUE, FALSE, 0x7);
 	irq_connect_dynamic(DT_IRQ_BY_IDX(DT_NODELABEL(timer), 5, irq),
 				0, timer_isr, NULL,
 				DT_IRQ_BY_IDX(DT_NODELABEL(timer), 5, flags));
