@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2020 ITE Corporation. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1441,8 +1441,13 @@ struct flash_it8xxx2_regs {
 #define IT8XXX2_GPIO_GRC1       ECREG(IT8XXX2_GPIO_BASE + 0xF0)
 #define IT8XXX2_GPIO_GRC21      ECREG(IT8XXX2_GPIO_BASE + 0xE6)
 
+#define IT8XXX2_GPIO_GPCRI3     ECREG(IT8XXX2_GPIO_BASE + 0x53)
+
 #define IT8XXX2_GPIO_GPCRP0     ECREG(IT8XXX2_GPIO2_BASE + 0x18)
 #define IT8XXX2_GPIO_GPCRP1     ECREG(IT8XXX2_GPIO2_BASE + 0x19)
+
+#define IT8XXX2_GPIO_GPCRA0     ECREG(IT8XXX2_GPIO_BASE + 0x10)
+#define IT8XXX2_GPIO_GPDRA      ECREG(IT8XXX2_GPIO_BASE + 0x01)
 
 /**
  *

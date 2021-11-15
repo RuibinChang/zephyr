@@ -9,4 +9,8 @@
 void main(void)
 {
 	printk("Hello World! %s\n", CONFIG_BOARD);
+
+	//GPA0 (148): output mode and output high
+	IT8XXX2_GPIO_GPCRA0 = 0x40;
+	IT8XXX2_GPIO_GPDRA |= 0x1;
 }

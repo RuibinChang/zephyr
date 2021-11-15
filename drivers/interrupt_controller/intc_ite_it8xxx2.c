@@ -190,9 +190,25 @@ bool ite_intc_no_irq(void)
 	return (IVECT == IVECT_OFFSET_WITH_IRQ);
 }
 
+extern int vcmp_flag;
+extern void arch_busy_wait(uint32_t usec_to_wait);
 uint8_t get_irq(void *arg)
 {
 	ARG_UNUSED(arg);
+
+	if (vcmp_flag == 1) {
+		int vcmp_aivect;
+
+		//GPA0 (148): output low before read AIVECT
+		IT8XXX2_GPIO_GPDRA &= ~0x1;
+		vcmp_flag = 0;
+
+		arch_busy_wait(800); /* 800us > scan cycle 600us */
+
+		vcmp_aivect = IVECT;
+		printk("LOW: AIVCT 0x%x\n", vcmp_aivect);
+		vcmp_aivect = 0;
+	}
 
 	/* wait until two equal interrupt values are read */
 	do {
@@ -204,6 +220,7 @@ uint8_t get_irq(void *arg)
 		 * sure the value we got is the correct value.
 		 */
 	} while (intc_irq != IVECT);
+	printk("AIVCT 0x%x\n", intc_irq);
 	/* determine interrupt number */
 	intc_irq -= IVECT_OFFSET_WITH_IRQ;
 	/* clear interrupt status */

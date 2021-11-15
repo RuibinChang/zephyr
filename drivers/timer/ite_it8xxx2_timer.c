@@ -140,6 +140,8 @@ void timer_5ms_one_shot(void)
 #ifdef CONFIG_ARCH_HAS_CUSTOM_BUSY_WAIT
 void arch_busy_wait(uint32_t usec_to_wait)
 {
+	printk("arch_busy_wait\n");
+
 	if (!usec_to_wait) {
 		return;
 	}
