@@ -7,15 +7,25 @@
 #include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/interrupt_controller/wuc_ite_it8xxx2.h>
 #include <zephyr/dt-bindings/gpio/ite-it8xxx2-gpio.h>
+#include <zephyr/dt-bindings/interrupt-controller/it8xxx2-wuc.h>
 #include <zephyr/dt-bindings/interrupt-controller/ite-intc.h>
 #include <zephyr/types.h>
 #include <zephyr/sys/util.h>
+#include <soc_dt.h>
 #include <string.h>
 #include <zephyr/logging/log.h>
 #include "gpio_utils.h"
 
 #define DT_DRV_COMPAT ite_it8xxx2_gpio
+
+struct gpio_wuc_map_cfg {
+	/* WUC control device structure */
+	const struct device *wucs;
+	/* WUC pin mask */
+	uint8_t mask;
+};
 
 /*
  * Structure gpio_ite_cfg is about the setting of gpio
@@ -32,10 +42,14 @@ struct gpio_ite_cfg {
 	uintptr_t reg_gpdmr;
 	/* gpio port output type register (bit mapping to pin) */
 	uintptr_t reg_gpotr;
+	/* Number of gpio pins in the group are in use. */
+	int ngpios;
 	/* Index in gpio_1p8v for voltage level control register element. */
 	uint8_t index;
 	/* gpio's irq */
 	uint8_t gpio_irq[8];
+	/* gpio wake-up input source configuration list */
+	const struct gpio_wuc_map_cfg *wuc_map_list;
 };
 
 /* Structure gpio_ite_data is about callback function */
@@ -50,180 +64,6 @@ struct gpio_ite_data {
 
 #define DEV_GPIO_CFG(dev) \
 	((const struct gpio_ite_cfg *)(dev)->config)
-
-/**
- * Convert wake-up controller (WUC) group to the corresponding wake-up edge
- * sense register (WUESR). Return pointer to the register.
- *
- * @param grp  WUC group.
- *
- * @return Pointer to corresponding WUESR register.
- */
-static volatile uint8_t *wuesr(uint8_t grp)
-{
-	/*
-	 * From WUESR1-WUESR4, the address increases by ones. From WUESR5 on
-	 * the address increases by fours.
-	 */
-	return (grp <= 4) ?
-			(volatile uint8_t *)(IT8XXX2_WUC_WUESR1 + grp-1) :
-			(volatile uint8_t *)(IT8XXX2_WUC_WUESR5 + 4*(grp-5));
-}
-
-/**
- * Convert wake-up controller (WUC) group to the corresponding wake-up edge
- * mode register (WUEMR). Return pointer to the register.
- *
- * @param grp  WUC group.
- *
- * @return Pointer to corresponding WUEMR register.
- */
-static volatile uint8_t *wuemr(uint8_t grp)
-{
-	/*
-	 * From WUEMR1-WUEMR4, the address increases by ones. From WUEMR5 on
-	 * the address increases by fours.
-	 */
-	return (grp <= 4) ?
-			(volatile uint8_t *)(IT8XXX2_WUC_WUEMR1 + grp-1) :
-			(volatile uint8_t *)(IT8XXX2_WUC_WUEMR5 + 4*(grp-5));
-}
-
-/**
- * Convert wake-up controller (WUC) group to the corresponding wake-up both edge
- * mode register (WUBEMR). Return pointer to the register.
- *
- * @param grp  WUC group.
- *
- * @return Pointer to corresponding WUBEMR register.
- */
-static volatile uint8_t *wubemr(uint8_t grp)
-{
-	/*
-	 * From WUBEMR1-WUBEMR4, the address increases by ones. From WUBEMR5 on
-	 * the address increases by fours.
-	 */
-	return (grp <= 4) ?
-			(volatile uint8_t *)(IT8XXX2_WUC_WUBEMR1 + grp-1) :
-			(volatile uint8_t *)(IT8XXX2_WUC_WUBEMR5 + 4*(grp-5));
-}
-
-/*
- * Array to store the corresponding GPIO WUC group and mask
- * for each WUC interrupt. This allows GPIO interrupts coming in through WUC
- * to easily identify which pin caused the interrupt.
- */
-static const struct {
-	uint8_t gpio_mask;
-	uint8_t wuc_group;
-	uint8_t wuc_mask;
-} gpio_irqs[] = {
-	/*     irq           gpio_mask, wuc_group, wuc_mask */
-	[IT8XXX2_IRQ_WU20] = {BIT(0), 2, BIT(0)},
-	[IT8XXX2_IRQ_WU21] = {BIT(1), 2, BIT(1)},
-	[IT8XXX2_IRQ_WU22] = {BIT(4), 2, BIT(2)},
-	[IT8XXX2_IRQ_WU23] = {BIT(6), 2, BIT(3)},
-	[IT8XXX2_IRQ_WU24] = {BIT(2), 2, BIT(4)},
-	[IT8XXX2_IRQ_WU40] = {BIT(5), 4, BIT(0)},
-	[IT8XXX2_IRQ_WU45] = {BIT(6), 4, BIT(5)},
-	[IT8XXX2_IRQ_WU46] = {BIT(7), 4, BIT(6)},
-	[IT8XXX2_IRQ_WU50] = {BIT(0), 5, BIT(0)},
-	[IT8XXX2_IRQ_WU51] = {BIT(1), 5, BIT(1)},
-	[IT8XXX2_IRQ_WU52] = {BIT(2), 5, BIT(2)},
-	[IT8XXX2_IRQ_WU53] = {BIT(3), 5, BIT(3)},
-	[IT8XXX2_IRQ_WU54] = {BIT(4), 5, BIT(4)},
-	[IT8XXX2_IRQ_WU55] = {BIT(5), 5, BIT(5)},
-	[IT8XXX2_IRQ_WU56] = {BIT(6), 5, BIT(6)},
-	[IT8XXX2_IRQ_WU57] = {BIT(7), 5, BIT(7)},
-	[IT8XXX2_IRQ_WU60] = {BIT(0), 6, BIT(0)},
-	[IT8XXX2_IRQ_WU61] = {BIT(1), 6, BIT(1)},
-	[IT8XXX2_IRQ_WU62] = {BIT(2), 6, BIT(2)},
-	[IT8XXX2_IRQ_WU63] = {BIT(3), 6, BIT(3)},
-	[IT8XXX2_IRQ_WU64] = {BIT(4), 6, BIT(4)},
-	[IT8XXX2_IRQ_WU65] = {BIT(5), 6, BIT(5)},
-	[IT8XXX2_IRQ_WU65] = {BIT(6), 6, BIT(6)},
-	[IT8XXX2_IRQ_WU67] = {BIT(7), 6, BIT(7)},
-	[IT8XXX2_IRQ_WU70] = {BIT(0), 7, BIT(0)},
-	[IT8XXX2_IRQ_WU71] = {BIT(1), 7, BIT(1)},
-	[IT8XXX2_IRQ_WU72] = {BIT(2), 7, BIT(2)},
-	[IT8XXX2_IRQ_WU73] = {BIT(3), 7, BIT(3)},
-	[IT8XXX2_IRQ_WU74] = {BIT(4), 7, BIT(4)},
-	[IT8XXX2_IRQ_WU75] = {BIT(5), 7, BIT(5)},
-	[IT8XXX2_IRQ_WU76] = {BIT(6), 7, BIT(6)},
-	[IT8XXX2_IRQ_WU77] = {BIT(7), 7, BIT(7)},
-	[IT8XXX2_IRQ_WU80] = {BIT(3), 8, BIT(0)},
-	[IT8XXX2_IRQ_WU81] = {BIT(4), 8, BIT(1)},
-	[IT8XXX2_IRQ_WU82] = {BIT(5), 8, BIT(2)},
-	[IT8XXX2_IRQ_WU83] = {BIT(6), 8, BIT(3)},
-	[IT8XXX2_IRQ_WU84] = {BIT(2), 8, BIT(4)},
-	[IT8XXX2_IRQ_WU85] = {BIT(0), 8, BIT(5)},
-	[IT8XXX2_IRQ_WU86] = {BIT(7), 8, BIT(6)},
-	[IT8XXX2_IRQ_WU87] = {BIT(7), 8, BIT(7)},
-	[IT8XXX2_IRQ_WU88] = {BIT(4), 9, BIT(0)},
-	[IT8XXX2_IRQ_WU89] = {BIT(5), 9, BIT(1)},
-	[IT8XXX2_IRQ_WU90] = {BIT(6), 9, BIT(2)},
-	[IT8XXX2_IRQ_WU91] = {BIT(0), 9, BIT(3)},
-	[IT8XXX2_IRQ_WU92] = {BIT(1), 9, BIT(4)},
-	[IT8XXX2_IRQ_WU93] = {BIT(2), 9, BIT(5)},
-	[IT8XXX2_IRQ_WU94] = {BIT(4), 9, BIT(6)},
-	[IT8XXX2_IRQ_WU95] = {BIT(2), 9, BIT(7)},
-	[IT8XXX2_IRQ_WU96] = {BIT(0), 10, BIT(0)},
-	[IT8XXX2_IRQ_WU97] = {BIT(1), 10, BIT(1)},
-	[IT8XXX2_IRQ_WU98] = {BIT(2), 10, BIT(2)},
-	[IT8XXX2_IRQ_WU99] = {BIT(3), 10, BIT(3)},
-	[IT8XXX2_IRQ_WU100] = {BIT(7), 10, BIT(4)},
-	[IT8XXX2_IRQ_WU101] = {BIT(0), 10, BIT(5)},
-	[IT8XXX2_IRQ_WU102] = {BIT(1), 10, BIT(6)},
-	[IT8XXX2_IRQ_WU103] = {BIT(3), 10, BIT(7)},
-	[IT8XXX2_IRQ_WU104] = {BIT(5), 11, BIT(0)},
-	[IT8XXX2_IRQ_WU105] = {BIT(6), 11, BIT(1)},
-	[IT8XXX2_IRQ_WU106] = {BIT(7), 11, BIT(2)},
-	[IT8XXX2_IRQ_WU107] = {BIT(1), 11, BIT(3)},
-	[IT8XXX2_IRQ_WU108] = {BIT(3), 11, BIT(4)},
-	[IT8XXX2_IRQ_WU109] = {BIT(5), 11, BIT(5)},
-	[IT8XXX2_IRQ_WU110] = {BIT(3), 11, BIT(6)},
-	[IT8XXX2_IRQ_WU111] = {BIT(4), 11, BIT(7)},
-	[IT8XXX2_IRQ_WU112] = {BIT(5), 12, BIT(0)},
-	[IT8XXX2_IRQ_WU113] = {BIT(6), 12, BIT(1)},
-	[IT8XXX2_IRQ_WU114] = {BIT(4), 12, BIT(2)},
-	[IT8XXX2_IRQ_WU115] = {BIT(0), 12, BIT(3)},
-	[IT8XXX2_IRQ_WU116] = {BIT(1), 12, BIT(4)},
-	[IT8XXX2_IRQ_WU117] = {BIT(2), 12, BIT(5)},
-	[IT8XXX2_IRQ_WU118] = {BIT(6), 12, BIT(6)},
-	[IT8XXX2_IRQ_WU119] = {BIT(0), 12, BIT(7)},
-	[IT8XXX2_IRQ_WU120] = {BIT(1), 13, BIT(0)},
-	[IT8XXX2_IRQ_WU121] = {BIT(2), 13, BIT(1)},
-	[IT8XXX2_IRQ_WU122] = {BIT(3), 13, BIT(2)},
-	[IT8XXX2_IRQ_WU123] = {BIT(3), 13, BIT(3)},
-	[IT8XXX2_IRQ_WU124] = {BIT(4), 13, BIT(4)},
-	[IT8XXX2_IRQ_WU125] = {BIT(5), 13, BIT(5)},
-	[IT8XXX2_IRQ_WU126] = {BIT(7), 13, BIT(6)},
-	[IT8XXX2_IRQ_WU128] = {BIT(0), 14, BIT(0)},
-	[IT8XXX2_IRQ_WU129] = {BIT(1), 14, BIT(1)},
-	[IT8XXX2_IRQ_WU130] = {BIT(2), 14, BIT(2)},
-	[IT8XXX2_IRQ_WU131] = {BIT(3), 14, BIT(3)},
-	[IT8XXX2_IRQ_WU132] = {BIT(4), 14, BIT(4)},
-	[IT8XXX2_IRQ_WU133] = {BIT(5), 14, BIT(5)},
-	[IT8XXX2_IRQ_WU134] = {BIT(6), 14, BIT(6)},
-	[IT8XXX2_IRQ_WU135] = {BIT(7), 14, BIT(7)},
-	[IT8XXX2_IRQ_WU136] = {BIT(0), 15, BIT(0)},
-	[IT8XXX2_IRQ_WU137] = {BIT(1), 15, BIT(1)},
-	[IT8XXX2_IRQ_WU138] = {BIT(2), 15, BIT(2)},
-	[IT8XXX2_IRQ_WU139] = {BIT(3), 15, BIT(3)},
-	[IT8XXX2_IRQ_WU140] = {BIT(4), 15, BIT(4)},
-	[IT8XXX2_IRQ_WU141] = {BIT(5), 15, BIT(5)},
-	[IT8XXX2_IRQ_WU142] = {BIT(6), 15, BIT(6)},
-	[IT8XXX2_IRQ_WU143] = {BIT(7), 15, BIT(7)},
-	[IT8XXX2_IRQ_WU144] = {BIT(0), 16, BIT(0)},
-	[IT8XXX2_IRQ_WU145] = {BIT(1), 16, BIT(1)},
-	[IT8XXX2_IRQ_WU146] = {BIT(2), 16, BIT(2)},
-	[IT8XXX2_IRQ_WU147] = {BIT(3), 16, BIT(3)},
-	[IT8XXX2_IRQ_WU148] = {BIT(4), 16, BIT(4)},
-	[IT8XXX2_IRQ_WU149] = {BIT(5), 16, BIT(5)},
-	[IT8XXX2_IRQ_WU150] = {BIT(6), 16, BIT(6)},
-	[IT8XXX2_IRQ_COUNT] = {     0,  0,     0},
-};
-BUILD_ASSERT(ARRAY_SIZE(gpio_irqs) == IT8XXX2_IRQ_COUNT + 1);
 
 /* 1.8v gpio group a, b, c, d, e, f, g, h, i, j, k, l, and m */
 #define GPIO_GROUP_COUNT 13
@@ -500,14 +340,23 @@ static void gpio_ite_isr(const void *arg)
 {
 	uint8_t irq = ite_intc_get_irq_num();
 	const struct device *dev = arg;
+	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
 	struct gpio_ite_data *data = DEV_GPIO_DATA(dev);
-	uint8_t gpio_mask = gpio_irqs[irq].gpio_mask;
+	int ngpios = gpio_config->ngpios;
+	uint8_t gpio_pin = 0;
 
-	if (gpio_irqs[irq].wuc_group) {
-		/* Clear the WUC status register. */
-		*(wuesr(gpio_irqs[irq].wuc_group)) = gpio_irqs[irq].wuc_mask;
-		gpio_fire_callbacks(&data->callbacks, dev, gpio_mask);
+	/* Find out the pin of gpio group */
+	for (gpio_pin = 0; gpio_pin <= ngpios; gpio_pin++) {
+		if (irq == gpio_config->gpio_irq[gpio_pin]) {
+			break;
+		}
 	}
+
+	/* W/C wakeup interrupt status */
+	it8xxx2_wuc_clear_status(gpio_config->wuc_map_list[gpio_pin].wucs,
+				 gpio_config->wuc_map_list[gpio_pin].mask);
+
+	gpio_fire_callbacks(&data->callbacks, dev, BIT(gpio_pin));
 }
 
 static int gpio_ite_pin_interrupt_configure(const struct device *dev,
@@ -517,6 +366,9 @@ static int gpio_ite_pin_interrupt_configure(const struct device *dev,
 {
 	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
 	uint8_t gpio_irq = gpio_config->gpio_irq[pin];
+	const struct device *wuc_wucs = gpio_config->wuc_map_list[pin].wucs;
+	uint8_t wuc_mask = gpio_config->wuc_map_list[pin].mask;
+	uint32_t flag = 0;
 
 	if (mode == GPIO_INT_MODE_DISABLED) {
 		/* Disable GPIO interrupt */
@@ -533,24 +385,27 @@ static int gpio_ite_pin_interrupt_configure(const struct device *dev,
 	irq_disable(gpio_irq);
 
 	if (trig & GPIO_INT_TRIG_BOTH) {
-		uint8_t wuc_group = gpio_irqs[gpio_irq].wuc_group;
-		uint8_t wuc_mask = gpio_irqs[gpio_irq].wuc_mask;
+		if (pin >= gpio_config->ngpios) {
+			printk("GPIO port%d pin%d isn't in use.\r\n",
+			       gpio_config->index, pin);
+			return -EINVAL;
+		}
 
-		/* Set both edges interrupt. */
-		if ((trig & GPIO_INT_TRIG_BOTH) == GPIO_INT_TRIG_BOTH)
-			*(wubemr(wuc_group)) |= wuc_mask;
-		else
-			*(wubemr(wuc_group)) &= ~wuc_mask;
+		/* Set wakeup interrupt trigger edge */
+		if ((trig & GPIO_INT_TRIG_BOTH) == GPIO_INT_TRIG_BOTH) {
+			flag = WUC_TYPE_EDGE_BOTH;
+		} else if (trig & GPIO_INT_TRIG_LOW) {
+			flag = WUC_TYPE_EDGE_FALLING;
+		} else {
+			flag = WUC_TYPE_EDGE_RISING;
+		}
+		it8xxx2_wuc_set_polarity(wuc_wucs, wuc_mask, flag);
 
-		if (trig & GPIO_INT_TRIG_LOW)
-			*(wuemr(wuc_group)) |= wuc_mask;
-		else
-			*(wuemr(wuc_group)) &= ~wuc_mask;
-		/*
-		 * Always write 1 to clear the WUC status register after
-		 * modifying edge mode selection register (WUBEMR and WUEMR).
-		 */
-		*(wuesr(wuc_group)) = wuc_mask;
+		/* W/C wakeup interrupt status */
+		it8xxx2_wuc_clear_status(wuc_wucs, wuc_mask);
+
+		/* Enable wakeup interrupt */
+		it8xxx2_wuc_enable(wuc_wucs, wuc_mask);
 	}
 
 	/* Enable GPIO interrupt */
@@ -576,35 +431,40 @@ static int gpio_ite_init(const struct device *dev)
 	return 0;
 }
 
-#define GPIO_ITE_DEV_CFG_DATA(inst)                                \
-static struct gpio_ite_data gpio_ite_data_##inst;                  \
-static const struct gpio_ite_cfg gpio_ite_cfg_##inst = {           \
-	.common = {                                                \
-		.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_NGPIOS(   \
-		DT_INST_PROP(inst, ngpios))                        \
-	},                                                         \
-	.reg_gpdr = DT_INST_REG_ADDR_BY_IDX(inst, 0),              \
-	.reg_gpcr = DT_INST_REG_ADDR_BY_IDX(inst, 1),              \
-	.reg_gpdmr = DT_INST_REG_ADDR_BY_IDX(inst, 2),             \
-	.reg_gpotr = DT_INST_REG_ADDR_BY_IDX(inst, 3),             \
-	.index = (uint8_t)(DT_INST_REG_ADDR(inst) -                \
-			   DT_REG_ADDR(DT_NODELABEL(gpioa))),      \
-	.gpio_irq[0] = DT_INST_IRQ_BY_IDX(inst, 0, irq),           \
-	.gpio_irq[1] = DT_INST_IRQ_BY_IDX(inst, 1, irq),           \
-	.gpio_irq[2] = DT_INST_IRQ_BY_IDX(inst, 2, irq),           \
-	.gpio_irq[3] = DT_INST_IRQ_BY_IDX(inst, 3, irq),           \
-	.gpio_irq[4] = DT_INST_IRQ_BY_IDX(inst, 4, irq),           \
-	.gpio_irq[5] = DT_INST_IRQ_BY_IDX(inst, 5, irq),           \
-	.gpio_irq[6] = DT_INST_IRQ_BY_IDX(inst, 6, irq),           \
-	.gpio_irq[7] = DT_INST_IRQ_BY_IDX(inst, 7, irq),           \
-	};                                                         \
-DEVICE_DT_INST_DEFINE(inst,                                        \
-		gpio_ite_init,                                     \
-		NULL,                                              \
-		&gpio_ite_data_##inst,                             \
-		&gpio_ite_cfg_##inst,                              \
-		PRE_KERNEL_1,                                       \
-		CONFIG_GPIO_INIT_PRIORITY,                         \
+#define GPIO_ITE_DEV_CFG_DATA(inst)                                            \
+static const struct gpio_wuc_map_cfg                                           \
+	gpio_wuc_##inst[IT8XXX2_DT_INST_WUCCTRL_LEN(inst)] =                   \
+		IT8XXX2_DT_WUC_ITEMS_LIST(inst);                               \
+static struct gpio_ite_data gpio_ite_data_##inst;                              \
+static const struct gpio_ite_cfg gpio_ite_cfg_##inst = {                       \
+	.common = {                                                            \
+		.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_NGPIOS(               \
+		DT_INST_PROP(inst, ngpios))                                    \
+	},                                                                     \
+	.reg_gpdr = DT_INST_REG_ADDR_BY_IDX(inst, 0),                          \
+	.reg_gpcr = DT_INST_REG_ADDR_BY_IDX(inst, 1),                          \
+	.reg_gpdmr = DT_INST_REG_ADDR_BY_IDX(inst, 2),                         \
+	.reg_gpotr = DT_INST_REG_ADDR_BY_IDX(inst, 3),                         \
+	.ngpios = DT_INST_PROP(inst, ngpios),                                  \
+	.index = (uint8_t)(DT_INST_REG_ADDR(inst) -                            \
+			   DT_REG_ADDR(DT_NODELABEL(gpioa))),                  \
+	.gpio_irq[0] = DT_INST_IRQ_BY_IDX(inst, 0, irq),                       \
+	.gpio_irq[1] = DT_INST_IRQ_BY_IDX(inst, 1, irq),                       \
+	.gpio_irq[2] = DT_INST_IRQ_BY_IDX(inst, 2, irq),                       \
+	.gpio_irq[3] = DT_INST_IRQ_BY_IDX(inst, 3, irq),                       \
+	.gpio_irq[4] = DT_INST_IRQ_BY_IDX(inst, 4, irq),                       \
+	.gpio_irq[5] = DT_INST_IRQ_BY_IDX(inst, 5, irq),                       \
+	.gpio_irq[6] = DT_INST_IRQ_BY_IDX(inst, 6, irq),                       \
+	.gpio_irq[7] = DT_INST_IRQ_BY_IDX(inst, 7, irq),                       \
+	.wuc_map_list = gpio_wuc_##inst,                                       \
+	};                                                                     \
+DEVICE_DT_INST_DEFINE(inst,                                                    \
+		gpio_ite_init,                                                 \
+		NULL,                                                          \
+		&gpio_ite_data_##inst,                                         \
+		&gpio_ite_cfg_##inst,                                          \
+		PRE_KERNEL_1,                                                  \
+		CONFIG_GPIO_INIT_PRIORITY,                                     \
 		&gpio_ite_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(GPIO_ITE_DEV_CFG_DATA)

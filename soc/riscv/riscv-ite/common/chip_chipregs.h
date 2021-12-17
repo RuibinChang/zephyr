@@ -689,17 +689,6 @@ struct pwm_it8xxx2_regs {
 #define PORSREGA		ECREG(EC_REG_BASE_ADDR + 0x1A14)
 #define PORSREGB		ECREG(EC_REG_BASE_ADDR + 0x1A15)
 
-/* --- Wake-Up Control (WUC) --- */
-#define IT8XXX2_WUC_BASE   0x00F01B00
-
-/* TODO: should a defined interface for configuring wake-up interrupts */
-#define IT8XXX2_WUC_WUEMR1 (IT8XXX2_WUC_BASE + 0x00)
-#define IT8XXX2_WUC_WUEMR5 (IT8XXX2_WUC_BASE + 0x0c)
-#define IT8XXX2_WUC_WUESR1 (IT8XXX2_WUC_BASE + 0x04)
-#define IT8XXX2_WUC_WUESR5 (IT8XXX2_WUC_BASE + 0x0d)
-#define IT8XXX2_WUC_WUBEMR1 (IT8XXX2_WUC_BASE + 0x3c)
-#define IT8XXX2_WUC_WUBEMR5 (IT8XXX2_WUC_BASE + 0x0f)
-
 /**
  *
  * (1Dxxh) Keyboard Matrix Scan control (KSCAN)

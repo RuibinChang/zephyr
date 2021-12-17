@@ -583,6 +583,14 @@
 				      IT8XXX2_IRQ_WU83 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU100 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu91    /* GPA0 */
+				   &wuc_wu92    /* GPA1 */
+				   &wuc_wu93    /* GPA2 */
+				   &wuc_wu80    /* GPA3 */
+				   &wuc_wu81    /* GPA4 */
+				   &wuc_wu82    /* GPA5 */
+				   &wuc_wu83    /* GPA6 */
+				   &wuc_wu100>; /* GPA7 */
 			#gpio-cells = <2>;
 		};
 
@@ -604,6 +612,14 @@
 				      IT8XXX2_IRQ_WU105 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU106 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu101   /* GPB0 */
+				   &wuc_wu102   /* GPB1 */
+				   &wuc_wu84    /* GPB2 */
+				   &wuc_wu103   /* GPB3 */
+				   &wuc_wu94    /* GPB4 */
+				   &wuc_wu104   /* GPB5 */
+				   &wuc_wu105   /* GPB6 */
+				   &wuc_wu106>; /* GPB7 */
 			wakeup-source;   /* WUI53 */
 			#gpio-cells = <2>;
 		};
@@ -626,6 +642,14 @@
 				      IT8XXX2_IRQ_WU23 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU86 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu85   /* GPC0 */
+				   &wuc_wu107  /* GPC1 */
+				   &wuc_wu95   /* GPC2 */
+				   &wuc_wu108  /* GPC3 */
+				   &wuc_wu22   /* GPC4 */
+				   &wuc_wu109  /* GPC5 */
+				   &wuc_wu23   /* GPC6 */
+				   &wuc_wu86>; /* GPC7 */
 			#gpio-cells = <2>;
 		};
 
@@ -647,6 +671,14 @@
 				      IT8XXX2_IRQ_WU113 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU87 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu20   /* GPD0 */
+				   &wuc_wu21   /* GPD1 */
+				   &wuc_wu24   /* GPD2 */
+				   &wuc_wu110  /* GPD3 */
+				   &wuc_wu111  /* GPD4 */
+				   &wuc_wu112  /* GPD5 */
+				   &wuc_wu113  /* GPD6 */
+				   &wuc_wu87>; /* GPD7 */
 			#gpio-cells = <2>;
 		};
 
@@ -668,6 +700,14 @@
 				      IT8XXX2_IRQ_WU45 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU46 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu70   /* GPE0 */
+				   &wuc_wu71   /* GPE1 */
+				   &wuc_wu72   /* GPE2 */
+				   &wuc_wu73   /* GPE3 */
+				   &wuc_wu114  /* GPE4 */
+				   &wuc_wu40   /* GPE5 */
+				   &wuc_wu45   /* GPE6 */
+				   &wuc_wu46>; /* GPE7 */
 			#gpio-cells = <2>;
 		};
 
@@ -689,6 +729,14 @@
 				      IT8XXX2_IRQ_WU66 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU67 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu96   /* GPF0 */
+				   &wuc_wu97   /* GPF1 */
+				   &wuc_wu98   /* GPF2 */
+				   &wuc_wu99   /* GPF3 */
+				   &wuc_wu64   /* GPF4 */
+				   &wuc_wu65   /* GPF5 */
+				   &wuc_wu66   /* GPF6 */
+				   &wuc_wu67>; /* GPF7 */
 			#gpio-cells = <2>;
 		};
 
@@ -710,6 +758,14 @@
 				      IT8XXX2_IRQ_WU118 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU126 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu115   /* GPG0 */
+				   &wuc_wu116   /* GPG1 */
+				   &wuc_wu117   /* GPG2 */
+				   &wuc_wu123   /* GPG3 */
+				   &wuc_wu124   /* GPG4 */
+				   &wuc_wu125   /* GPG5 */
+				   &wuc_wu118   /* GPG6 */
+				   &wuc_wu126>; /* GPG7 */
 			#gpio-cells = <2>;
 		};
 
@@ -719,7 +775,7 @@
 			       0x00f01648 8   /* GPCR */
 			       0x00f01668 1   /* GPDMR (get) */
 			       0x00f01678 1>; /* GPOTR */
-			ngpios = <8>;
+			ngpios = <7>;
 			label = "GPIO_H";
 			gpio-controller;
 			interrupts = <IT8XXX2_IRQ_WU60 IRQ_TYPE_LEVEL_HIGH
@@ -731,6 +787,13 @@
 				IT8XXX2_IRQ_WU90 IRQ_TYPE_LEVEL_HIGH
 				0 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu60   /* GPH0 */
+				   &wuc_wu61   /* GPH1 */
+				   &wuc_wu62   /* GPH2 */
+				   &wuc_wu63   /* GPH3 */
+				   &wuc_wu88   /* GPH4 */
+				   &wuc_wu89   /* GPH5 */
+				   &wuc_wu90>; /* GPH6 */
 			wakeup-source;   /* WUI17 */
 			#gpio-cells = <2>;
 		};
@@ -753,6 +816,14 @@
 				      IT8XXX2_IRQ_WU76 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU77 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu119  /* GPI0 */
+				   &wuc_wu120  /* GPI1 */
+				   &wuc_wu121  /* GPI2 */
+				   &wuc_wu122  /* GPI3 */
+				   &wuc_wu74   /* GPI4 */
+				   &wuc_wu75   /* GPI5 */
+				   &wuc_wu76   /* GPI6 */
+				   &wuc_wu77>; /* GPI7 */
 			#gpio-cells = <2>;
 		};
 
@@ -774,6 +845,14 @@
 				      IT8XXX2_IRQ_WU134 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU135 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu128   /* GPJ0 */
+				   &wuc_wu129   /* GPJ1 */
+				   &wuc_wu130   /* GPJ2 */
+				   &wuc_wu131   /* GPJ3 */
+				   &wuc_wu132   /* GPJ4 */
+				   &wuc_wu133   /* GPJ5 */
+				   &wuc_wu134   /* GPJ6 */
+				   &wuc_wu135>; /* GPJ7 */
 			#gpio-cells = <2>;
 		};
 
@@ -795,6 +874,14 @@
 				      IT8XXX2_IRQ_WU56 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU57 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu50   /* GPK0 */
+				   &wuc_wu51   /* GPK1 */
+				   &wuc_wu52   /* GPK2 */
+				   &wuc_wu53   /* GPK3 */
+				   &wuc_wu54   /* GPK4 */
+				   &wuc_wu55   /* GPK5 */
+				   &wuc_wu56   /* GPK6 */
+				   &wuc_wu57>; /* GPK7 */
 			#gpio-cells = <2>;
 		};
 
@@ -816,6 +903,14 @@
 				      IT8XXX2_IRQ_WU142 IRQ_TYPE_LEVEL_HIGH
 				      IT8XXX2_IRQ_WU143 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu136   /* GPL0 */
+				   &wuc_wu137   /* GPL1 */
+				   &wuc_wu138   /* GPL2 */
+				   &wuc_wu139   /* GPL3 */
+				   &wuc_wu140   /* GPL4 */
+				   &wuc_wu141   /* GPL5 */
+				   &wuc_wu142   /* GPL6 */
+				   &wuc_wu143>; /* GPL7 */
 			#gpio-cells = <2>;
 		};
 
@@ -837,6 +932,13 @@
 				IT8XXX2_IRQ_WU150 IRQ_TYPE_LEVEL_HIGH
 				0 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&intc>;
+			wucctrl = <&wuc_wu144   /* GPM0 */
+				   &wuc_wu145   /* GPM1 */
+				   &wuc_wu146   /* GPM2 */
+				   &wuc_wu147   /* GPM3 */
+				   &wuc_wu148   /* GPM4 */
+				   &wuc_wu149   /* GPM5 */
+				   &wuc_wu150>; /* GPM6 */
 			#gpio-cells = <2>;
 		};
 
