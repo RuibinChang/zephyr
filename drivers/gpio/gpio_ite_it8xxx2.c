@@ -58,13 +58,6 @@ struct gpio_ite_data {
 	sys_slist_t callbacks;
 };
 
-/* dev macros for GPIO */
-#define DEV_GPIO_DATA(dev) \
-	((struct gpio_ite_data *)(dev)->data)
-
-#define DEV_GPIO_CFG(dev) \
-	((const struct gpio_ite_cfg *)(dev)->config)
-
 /* 1.8v gpio group a, b, c, d, e, f, g, h, i, j, k, l, and m */
 #define GPIO_GROUP_COUNT 13
 #define GPIO_GROUP_INDEX(label) \
@@ -188,8 +181,7 @@ static int gpio_ite_configure(const struct device *dev,
 				gpio_pin_t pin,
 				gpio_flags_t flags)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
-
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdr = (uint8_t *)gpio_config->reg_gpdr;
 	volatile uint8_t *reg_gpcr = (uint8_t *)(gpio_config->reg_gpcr + pin);
 	volatile uint8_t *reg_gpotr = (uint8_t *)gpio_config->reg_gpotr;
@@ -269,7 +261,7 @@ static int gpio_ite_configure(const struct device *dev,
 static int gpio_ite_port_get_raw(const struct device *dev,
 					gpio_port_value_t *value)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdmr = (uint8_t *)gpio_config->reg_gpdmr;
 
 	/* Get raw bits of GPIO mirror register */
@@ -282,7 +274,7 @@ static int gpio_ite_port_set_masked_raw(const struct device *dev,
 					gpio_port_pins_t mask,
 					gpio_port_value_t value)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdr = (uint8_t *)gpio_config->reg_gpdr;
 	uint8_t out = *reg_gpdr;
 
@@ -294,7 +286,7 @@ static int gpio_ite_port_set_masked_raw(const struct device *dev,
 static int gpio_ite_port_set_bits_raw(const struct device *dev,
 					gpio_port_pins_t pins)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdr = (uint8_t *)gpio_config->reg_gpdr;
 
 	/* Set raw bits of GPIO data register */
@@ -306,7 +298,7 @@ static int gpio_ite_port_set_bits_raw(const struct device *dev,
 static int gpio_ite_port_clear_bits_raw(const struct device *dev,
 						gpio_port_pins_t pins)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdr = (uint8_t *)gpio_config->reg_gpdr;
 
 	/* Clear raw bits of GPIO data register */
@@ -318,7 +310,7 @@ static int gpio_ite_port_clear_bits_raw(const struct device *dev,
 static int gpio_ite_port_toggle_bits(const struct device *dev,
 					gpio_port_pins_t pins)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	volatile uint8_t *reg_gpdr = (uint8_t *)gpio_config->reg_gpdr;
 
 	/* Toggle raw bits of GPIO data register */
@@ -331,7 +323,7 @@ static int gpio_ite_manage_callback(const struct device *dev,
 					struct gpio_callback *callback,
 					bool set)
 {
-	struct gpio_ite_data *data = DEV_GPIO_DATA(dev);
+	struct gpio_ite_data *data = dev->data;
 
 	return gpio_manage_callback(&data->callbacks, callback, set);
 }
@@ -340,8 +332,8 @@ static void gpio_ite_isr(const void *arg)
 {
 	uint8_t irq = ite_intc_get_irq_num();
 	const struct device *dev = arg;
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
-	struct gpio_ite_data *data = DEV_GPIO_DATA(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
+	struct gpio_ite_data *data = dev->data;
 	int ngpios = gpio_config->ngpios;
 	uint8_t gpio_pin = 0;
 
@@ -364,7 +356,7 @@ static int gpio_ite_pin_interrupt_configure(const struct device *dev,
 						enum gpio_int_mode mode,
 						enum gpio_int_trig trig)
 {
-	const struct gpio_ite_cfg *gpio_config = DEV_GPIO_CFG(dev);
+	const struct gpio_ite_cfg *gpio_config = dev->config;
 	uint8_t gpio_irq = gpio_config->gpio_irq[pin];
 	const struct device *wuc_wucs = gpio_config->wuc_map_list[pin].wucs;
 	uint8_t wuc_mask = gpio_config->wuc_map_list[pin].mask;
