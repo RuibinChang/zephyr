@@ -39,6 +39,7 @@ void it8xxx2_wuc_enable(const struct device *dev, uint8_t mask)
 	 * others are always enabled.
 	 */
 	if (reg_wuenr == IT8XXX2_WUC_UNUSED_REG) {
+		printk("WUC enable only support 1, 3, and 4 group\n");
 		return;
 	}
 
@@ -56,6 +57,7 @@ void it8xxx2_wuc_disable(const struct device *dev, uint8_t mask)
 	 * others are always enabled.
 	 */
 	if (reg_wuenr == IT8XXX2_WUC_UNUSED_REG) {
+		printk("WUC disable only support 1, 3, and 4 group\n");
 		return;
 	}
 
@@ -74,6 +76,7 @@ void it8xxx2_wuc_clear_status(const struct device *dev, uint8_t mask)
 
 	/* W/C wakeup interrupt status of the pin */
 	*reg_wuesr = mask;
+	printk("WUC Clr status, %s wuesr addr 0x%p, mask 0x%x\n", dev->name, reg_wuesr, mask);
 }
 
 void it8xxx2_wuc_set_polarity(const struct device *dev, uint8_t mask, uint32_t flags)
@@ -90,12 +93,15 @@ void it8xxx2_wuc_set_polarity(const struct device *dev, uint8_t mask, uint32_t f
 	if ((flags & WUC_TYPE_EDGE_BOTH) == WUC_TYPE_EDGE_RISING) {
 		*reg_wubemr &= ~mask;
 		*reg_wuemr &= ~mask;
+		printk("WUC Rising edge trigger, %s wuemr addr 0x%p, mask 0x%x\n", dev->name, reg_wuemr, mask);
 	} else if ((flags & WUC_TYPE_EDGE_BOTH) == WUC_TYPE_EDGE_FALLING) {
 		*reg_wubemr &= ~mask;
 		*reg_wuemr |= mask;
+		printk("WUC Falling edge trigger, %s wuemr addr 0x%p, mask 0x%x\n", dev->name, reg_wuemr, mask);
 	} else {
 		/* Both edge trigger mode */
 		*reg_wubemr |= mask;
+		printk("WUC Both edge trigger, %s wuemr addr 0x%p, mask 0x%x\n", dev->name, reg_wuemr, mask);
 	}
 }
 

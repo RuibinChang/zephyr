@@ -192,6 +192,8 @@ static void keyboard_raw_interrupt(const struct device *dev)
 	const struct kscan_it8xxx2_config *const config = dev->config;
 	struct kscan_it8xxx2_data *data = dev->data;
 
+	printk("KSCAN INT: WUESR3 = 0x%x (trigger)\n", IT8XXX2_WUC_WUESR3);
+
 	/*
 	 * W/C wakeup interrupt status of KSI[7:0] pins
 	 *
@@ -200,6 +202,8 @@ static void keyboard_raw_interrupt(const struct device *dev)
 	 */
 	it8xxx2_wuc_clear_status(config->wuc_map_list[0].wucs,
 				 data->ksi_pin_mask);
+
+	printk("KSCAN INT: WUESR3 = 0x%x (clear)\n", IT8XXX2_WUC_WUESR3);
 
 	/* W/C interrupt status of KSI[7:0] pins */
 	ite_intc_isr_clear(config->irq);
@@ -222,6 +226,7 @@ void keyboard_raw_enable_interrupt(const struct device *dev, int enable)
 		 */
 		it8xxx2_wuc_clear_status(config->wuc_map_list[0].wucs,
 					 data->ksi_pin_mask);
+		printk("KSCAN En INT: WUESR3 = 0x%x (0x0)\n", IT8XXX2_WUC_WUESR3);
 
 		/* W/C interrupt status of KSI[7:0] pins */
 		ite_intc_isr_clear(config->irq);
@@ -489,6 +494,9 @@ static int kscan_it8xxx2_init(const struct device *dev)
 		}
 		data->ksi_pin_mask |= config->wuc_map_list[i].mask;
 	}
+
+	printk("KSCAN Init: WUEMR3 = 0x%x (0xFF), WUBEMR3 = 0x%x (0x0), WUESR3 = 0x%x (0x0), WUENR3 = 0x%x (0xFF)\n",
+		IT8XXX2_WUC_WUEMR3, IT8XXX2_WUC_WUBEMR3, IT8XXX2_WUC_WUESR3, IT8XXX2_WUC_WUENR3);
 
 	/* W/C interrupt status of KSI[7:0] pins */
 	ite_intc_isr_clear(config->irq);

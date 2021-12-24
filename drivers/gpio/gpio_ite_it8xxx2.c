@@ -344,11 +344,16 @@ static void gpio_ite_isr(const void *arg)
 		}
 	}
 
+	printk("GPIO INT: GPIO group %d, pin 0x%x\n",
+		gpio_config->index,
+		gpio_pin);
+
 	/* W/C wakeup interrupt status */
 	it8xxx2_wuc_clear_status(gpio_config->wuc_map_list[gpio_pin].wucs,
 				 gpio_config->wuc_map_list[gpio_pin].mask);
 
 	gpio_fire_callbacks(&data->callbacks, dev, BIT(gpio_pin));
+	//printk("WUESRx = 0x%x\n", IT8XXX2_WUC_WUESR8);
 }
 
 static int gpio_ite_pin_interrupt_configure(const struct device *dev,
@@ -420,6 +425,34 @@ static const struct gpio_driver_api gpio_ite_driver_api = {
 
 static int gpio_ite_init(const struct device *dev)
 {
+	const struct gpio_ite_cfg *const config = dev->config;
+
+	printk("GPIO%d Init:\n", config->index);
+
+	if (config->index == 12 /* GPMx, 0~12 */) {
+		/* Error test GPM7 */
+		gpio_ite_pin_interrupt_configure(dev, 7, GPIO_INT_MODE_EDGE, GPIO_INT_TRIG_HIGH);
+	}
+
+	if (config->index == 7 /* GPHx, 0~12 */) {
+		/* Error test GPH7 */
+		gpio_ite_pin_interrupt_configure(dev, 7, GPIO_INT_MODE_EDGE, GPIO_INT_TRIG_HIGH);
+	}
+
+	if (config->index == 3 /* GPDx, 0~12 */) {
+		/* Set GPD7 (J9-2) => list[7] = wuc_wu87 => WUC group 8 mask 0x80 to GPIO_INT and rising edge triggered */
+		gpio_ite_pin_interrupt_configure(dev, 7, GPIO_INT_MODE_EDGE, GPIO_INT_TRIG_HIGH);
+		printk("WUEMR8 = 0x%x, WUBEMR8 = 0x%x, WUESR8 = 0x%x\n",
+			IT8XXX2_WUC_WUEMR8, IT8XXX2_WUC_WUBEMR8, IT8XXX2_WUC_WUESR8);
+	}
+
+	if (config->index == 0 /* GPAx, 0~12 */) {
+		/* Set GPA2 (154) => list[2] = wuc_wu93 => WUC group 9 mask 0x20 to GPIO_INT and rising edge triggered */
+		gpio_ite_pin_interrupt_configure(dev, 2, GPIO_INT_MODE_EDGE, GPIO_INT_TRIG_HIGH);
+		printk("WUEMR9 = 0x%x, WUBEMR9 = 0x%x, WUESR9 = 0x%x\n",
+			IT8XXX2_WUC_WUEMR9, IT8XXX2_WUC_WUBEMR9, IT8XXX2_WUC_WUESR9);
+	}
+
 	return 0;
 }
 
@@ -455,7 +488,7 @@ DEVICE_DT_INST_DEFINE(inst,                                                    \
 		NULL,                                                          \
 		&gpio_ite_data_##inst,                                         \
 		&gpio_ite_cfg_##inst,                                          \
-		PRE_KERNEL_1,                                                  \
+		POST_KERNEL/*PRE_KERNEL_1*/,                                                  \
 		CONFIG_GPIO_INIT_PRIORITY,                                     \
 		&gpio_ite_driver_api);
 
@@ -483,4 +516,4 @@ static int gpio_it8xxx2_init_set(const struct device *arg)
 
 	return 0;
 }
-SYS_INIT(gpio_it8xxx2_init_set, PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY);
+SYS_INIT(gpio_it8xxx2_init_set, POST_KERNEL/*PRE_KERNEL_1*/, CONFIG_GPIO_INIT_PRIORITY);
