@@ -116,6 +116,10 @@ static int adc_it8xxx2_channel_setup(const struct device *dev,
 	pinmux_pin_set(config[channel_id].pinctrls,
 		       config[channel_id].pin,
 		       config[channel_id].alt_fun);
+
+	/* Test on evb ADC3 pin142 */
+	printk("ADC Setup(): GPCRI3 (ADC3) = 0x%x (bit7,6 = 00b)\n", IT8XXX2_GPIO_GPCRI3);
+
 	LOG_DBG("Channel setup succeeded!");
 	return 0;
 }
