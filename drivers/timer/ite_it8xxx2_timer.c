@@ -18,6 +18,9 @@ LOG_MODULE_REGISTER(timer, LOG_LEVEL_ERR);
 BUILD_ASSERT(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 32768,
 	     "ITE RTOS timer HW frequency is fixed at 32768Hz");
 
+/* RAM code section */
+//define __timer_ram_code __attribute__((section(".__ram_code")))
+
 /* Event timer configurations */
 #define EVENT_TIMER		EXT_TIMER_3
 #define EVENT_TIMER_IRQ		DT_INST_IRQ_BY_IDX(0, 0, irq)
@@ -140,6 +143,9 @@ void timer_5ms_one_shot(void)
 #ifdef CONFIG_ARCH_HAS_CUSTOM_BUSY_WAIT
 void arch_busy_wait(uint32_t usec_to_wait)
 {
+	/* Set GPA0 (148) output high */
+	IT8XXX2_GPIO_GPDRA = 0x1;
+
 	if (!usec_to_wait) {
 		return;
 	}
@@ -160,6 +166,15 @@ void arch_busy_wait(uint32_t usec_to_wait)
 			break;
 		}
 	}
+
+	/* Set GPA0 (148) output low */
+	IT8XXX2_GPIO_GPDRA = 0x0;
+
+	/* High to low: check GPIO latency */
+	/* Set GPA0 (148) output high */
+	IT8XXX2_GPIO_GPDRA = 0x1;
+	/* Set GPA0 (148) output low */
+	IT8XXX2_GPIO_GPDRA = 0x0;
 }
 #endif
 
@@ -444,6 +459,9 @@ static int sys_clock_driver_init(const struct device *dev)
 			LOG_ERR("Init busy wait low timer failed");
 			return ret;
 		}
+
+		//printk("Timer6: ctrl 0x%x (0x0), psr 0x%x (0x3), cnt 0x%lx (0xffffffff) \n", IT8XXX2_EXT_CTRLX(BUSY_WAIT_H_TIMER), IT8XXX2_EXT_PSRX(BUSY_WAIT_H_TIMER), IT8XXX2_EXT_CNTX(BUSY_WAIT_H_TIMER));
+		//printk("Timer5: ctrl 0x%x (0x8), psr 0x%x (0x3), cnt 0x%lx (0x7) \n", IT8XXX2_EXT_CTRLX(BUSY_WAIT_L_TIMER), IT8XXX2_EXT_PSRX(BUSY_WAIT_L_TIMER), IT8XXX2_EXT_CNTX(BUSY_WAIT_L_TIMER));
 	}
 
 	return 0;

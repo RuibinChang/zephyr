@@ -30,7 +30,11 @@ void boot_banner(void)
 	if (boot_delay > 0 && IS_ENABLED(CONFIG_MULTITHREADING)) {
 		printk("***** delaying boot " STRINGIFY(
 			CONFIG_BOOT_DELAY) "ms (per build configuration) *****\n");
-		k_busy_wait(CONFIG_BOOT_DELAY * USEC_PER_MSEC);
+		//k_busy_wait(CONFIG_BOOT_DELAY * USEC_PER_MSEC);
+		//Don't call k_busy_wait(), we want to compare first and !first time of calling k_busy_wait()
+		for (int i = 0; i < 100000; i++) {
+			i++;
+		}
 	}
 
 #if defined(CONFIG_BOOT_BANNER)
