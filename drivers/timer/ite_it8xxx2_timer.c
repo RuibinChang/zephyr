@@ -271,7 +271,7 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 
 	k_spin_unlock(&lock, key);
 
-	LOG_DBG("timeout is 0x%x, set hw count 0x%x", ticks, hw_cnt);
+	printk("timeout is 0x%x, set hw count 0x%x\n", ticks, hw_cnt);
 }
 
 uint32_t sys_clock_elapsed(void)

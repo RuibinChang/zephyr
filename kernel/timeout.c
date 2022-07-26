@@ -73,15 +73,19 @@ static int32_t next_timeout(void)
 	if ((to == NULL) ||
 	    ((int64_t)(to->dticks - ticks_elapsed) > (int64_t)INT_MAX)) {
 		ret = MAX_WAIT;
+		//printk("next_timeout(): if\n");
 	} else {
 		ret = MAX(0, to->dticks - ticks_elapsed);
+		//printk("next_timeout(): else\n");
 	}
 
 #ifdef CONFIG_TIMESLICING
 	if (_current_cpu->slice_ticks && _current_cpu->slice_ticks < ret) {
 		ret = _current_cpu->slice_ticks;
+		//printk("next_timeout(): CONFIG_TIMESLICING\n");
 	}
 #endif
+	printk("next_timeout(): _current_cpu->slice_ticks 0x%x\n", ret);
 	return ret;
 }
 

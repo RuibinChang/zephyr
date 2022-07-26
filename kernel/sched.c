@@ -433,7 +433,8 @@ void z_reset_time_slice(struct k_thread *curr)
 	 */
 	if (slice_time(curr) != 0) {
 		_current_cpu->slice_ticks = slice_time(curr) + sys_clock_elapsed();
-		z_set_timeout_expiry(slice_time(curr), false);
+		printk("z_reset_time_slice(): _current_cpu->slice_ticks 0x%x\n", _current_cpu->slice_ticks);
+		z_set_timeout_expiry(slice_time(curr), false); // -> next_timeout()
 	}
 }
 
@@ -441,6 +442,7 @@ void k_sched_time_slice_set(int32_t slice, int prio)
 {
 	LOCKED(&sched_spinlock) {
 		_current_cpu->slice_ticks = 0;
+		printk("k_sched_time_slice_set(): _current_cpu->slice_ticks 0x%x\n", _current_cpu->slice_ticks);
 		slice_ticks = k_ms_to_ticks_ceil32(slice);
 		if (IS_ENABLED(CONFIG_TICKLESS_KERNEL) && slice > 0) {
 			/* It's not possible to reliably set a 1-tick
@@ -527,12 +529,12 @@ void z_time_slice(int ticks)
 			 * after this line that requires
 			 * synchronization.
 			 */
-			key = slice_expired_locked(key);
+			key = slice_expired_locked(key);//
 		} else {
-			_current_cpu->slice_ticks -= ticks;
+			_current_cpu->slice_ticks -= ticks;//
 		}
 	} else {
-		_current_cpu->slice_ticks = 0;
+		_current_cpu->slice_ticks = 0;//
 	}
 	k_spin_unlock(&sched_spinlock, key);
 }
@@ -1425,11 +1427,13 @@ static int32_t z_tick_sleep(k_ticks_t ticks)
 #if defined(CONFIG_TIMESLICING) && defined(CONFIG_SWAP_NONATOMIC)
 	pending_current = _current;
 #endif
-	unready_thread(_current);
-	z_add_thread_timeout(_current, timeout);
+	unready_thread(_current); // -> z_reset_time_slice()
+	z_add_thread_timeout(_current, timeout); // -> next_timeout()
 	z_mark_thread_as_suspended(_current);
 
+	printk("z_tick_sleep(): bf z_swap()\n");
 	(void)z_swap(&sched_spinlock, key);
+	printk("z_tick_sleep(): af z_swap()\n");
 
 	__ASSERT(!z_is_thread_state_set(_current, _THREAD_SUSPENDED), "");
 
@@ -1461,7 +1465,9 @@ int32_t z_impl_k_sleep(k_timeout_t timeout)
 
 	ticks = timeout.ticks;
 
+	printk("z_impl_k_sleep(): bf z_tick_sleep(tick %lld)\n", ticks);
 	ticks = z_tick_sleep(ticks);
+	printk("z_impl_k_sleep(): af z_tick_sleep()\n");
 
 	int32_t ret = k_ticks_to_ms_floor64(ticks);
 

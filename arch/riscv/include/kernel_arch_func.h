@@ -47,7 +47,9 @@ arch_switch(void *switch_to, void **switched_from)
 #ifdef CONFIG_RISCV_ALWAYS_SWITCH_THROUGH_ECALL
 	arch_syscall_invoke2((uintptr_t)new, (uintptr_t)old, RV_ECALL_SCHEDULE);
 #else
+	printk("arch_switch(): bf z_riscv_switch()\n");
 	z_riscv_switch(new, old);
+	printk("arch_switch(): af z_riscv_switch()\n");
 #endif
 }
 

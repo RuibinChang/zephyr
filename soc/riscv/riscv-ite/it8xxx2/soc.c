@@ -199,6 +199,8 @@ bool cpu_idle_not_allowed(void)
 /* The routine must be called with interrupts locked */
 void riscv_idle(enum chip_pll_mode mode, unsigned int key)
 {
+	printk("riscv_idle(): event ctrl 0x%x, psr 0x%x, ocnt 0x%lx, ier19 bit3 0x%x, isr19 bit3 0x%x\n", IT8XXX2_EXT_CTRLX(EXT_TIMER_3), IT8XXX2_EXT_PSRX(EXT_TIMER_3), IT8XXX2_EXT_CNTOX(EXT_TIMER_3), IER19, ISR19);
+
 	/*
 	 * The routine is called with interrupts locked (in kernel/idle()).
 	 * But on kernel/context test_kernel_cpu_idle test, the routine will be
@@ -223,6 +225,7 @@ void riscv_idle(enum chip_pll_mode mode, unsigned int key)
 		 */
 	} while (ite_intc_no_irq());
 
+	printk("riscv_idle(): isr19 bit3 0x%x\n", ISR19);
 	/*
 	 * Enable M-mode external interrupt
 	 * An interrupt can not be fired yet until we enable global interrupt

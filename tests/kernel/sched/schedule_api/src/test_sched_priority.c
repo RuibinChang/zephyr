@@ -60,7 +60,9 @@ void test_priority_cooperative(void)
 				      spawn_prio, 0, K_NO_WAIT);
 	/* checkpoint: current thread shouldn't preempted by higher thread */
 	zassert_true(last_prio == k_thread_priority_get(k_current_get()), NULL);
-	k_sleep(K_MSEC(100));
+	printk("test_priority_cooperative(): bf k_sleep(100ms)\n");
+	k_sleep(K_MSEC(100)); // -> z_impl_k_sleep()
+	printk("test_priority_cooperative(): af k_sleep(100ms)\n");
 	/* checkpoint: spawned thread get executed */
 	zassert_true(last_prio == spawn_prio, NULL);
 	k_thread_abort(tid);
