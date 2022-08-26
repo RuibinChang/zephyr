@@ -202,6 +202,30 @@ static int gpio_kscan_it8xxx2_port_toggle_bits(const struct device *dev,
 
 static int gpio_kscan_it8xxx2_init(const struct device *dev)
 {
+#ifndef CONFIG_KSCAN
+	const struct gpio_kscan_cfg *const config = dev->config;
+
+	if (config->reg_ksi_kso_goen == (uint8_t *)0x00f01d07 /*gpioksi*/) {
+		/* KSI[2:0]: 06h = 0x7, 07h = 0x3, 08h = 0x1, 09h = 0x5, 26h = 0x4*/
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)0, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_HIGH));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)1, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)2, (gpio_flags_t)(GPIO_INPUT | GPIO_PULL_UP));
+		/* 08h = 0x3, 09h = 0x7 */
+		//const struct device *io_dev = DEVICE_DT_GET(DT_NODELABEL(gpioksi)); //get KSI node
+		//gpio_kscan_it8xxx2_port_set_masked_raw(io_dev, (gpio_port_pins_t)(BIT(0)|BIT(1)), (gpio_port_value_t)(BIT(0)|BIT(1)));
+	} else if (config->reg_ksi_kso_goen == (uint8_t *)0x00f01d0b /*gpioksoh*/) {
+		/* KSO[10:8]: 0Ah = 0x7, 0Bh = 0x3, 01h = 0x1, 0Ch = 0x5, 27h = 0x4 */
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)0, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_HIGH));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)1, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)2, (gpio_flags_t)(GPIO_INPUT | GPIO_PULL_UP));
+	} else if (config->reg_ksi_kso_goen == (uint8_t *)0x00f01d0e /*gpioksol*/) {
+		/* KSO[2:0]: 0Dh = 0x7, 0Eh = 0x3, 00h = 0x1, 0Fh = 0x5, 28h = 0x4 */
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)0, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_HIGH));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)1, (gpio_flags_t)(GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW));
+		gpio_kscan_it8xxx2_configure(dev, (gpio_pin_t)2, (gpio_flags_t)(GPIO_INPUT | GPIO_PULL_UP));
+	}
+#endif
+
 	return 0;
 }
 

@@ -199,9 +199,14 @@
 	};
 	kso15_default: kso15_default {
 		pinmuxs = <&pinctrlksoh 7 IT8XXX2_ALT_FUNC_1>;
-		drive-open-drain;
+		drive-open-drain; /* 0x2h = 0x5 (all kso drive-open-drain + pullup) */
+		/*drive-push-pull;*/ /* 0x2h = 0x4 (all kso drive-push-pull + pullup) */
 		bias-pull-up;
-	};
+	};                       /* 0x4h = 0xFF ksi scan in data */
+				 /* 0x5h = 0x4 all ksi pullup */
+				 /* 0x6h = 0x0 ksi kbs mode */
+				 /* 0xAh = 0x0 ksoh kbs mode */
+				 /* 0xDh = 0x0 ksol kbs mode */
 	kso16_gpc3_default: kso16_gpc3_default {
 		pinmuxs = <&pinctrlc 3 IT8XXX2_ALT_FUNC_1>;
 		bias-pull-up;
