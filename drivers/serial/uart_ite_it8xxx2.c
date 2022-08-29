@@ -54,6 +54,7 @@ void uart1_wui_isr(const struct device *gpio, struct gpio_callback *cb,
 	/* Refresh console expired time if got UART Rx wake-up event */
 #ifdef CONFIG_UART_CONSOLE_INPUT_EXPIRED
 	k_timeout_t delay = K_MSEC(CONFIG_UART_CONSOLE_INPUT_EXPIRED_TIMEOUT);
+	//k_timeout_t delay = K_MSEC(0); //won't prevent 15s to not go to PM_STATE_STANDBY
 
 	/*
 	 * The pm state of it8xxx2 chip only supports standby, so here we
@@ -74,6 +75,7 @@ void uart2_wui_isr(const struct device *gpio, struct gpio_callback *cb,
 	/* Refresh console expired time if got UART Rx wake-up event */
 #ifdef CONFIG_UART_CONSOLE_INPUT_EXPIRED
 	k_timeout_t delay = K_MSEC(CONFIG_UART_CONSOLE_INPUT_EXPIRED_TIMEOUT);
+	//k_timeout_t delay = K_MSEC(0); //won't prevent 15s to not go to PM_STATE_STANDBY
 
 	/*
 	 * The pm state of it8xxx2 chip only supports standby, so here we

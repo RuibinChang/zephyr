@@ -98,11 +98,12 @@ const struct pm_state_info *pm_policy_next_state(uint8_t cpu, int32_t ticks)
 			continue;
 		}
 
-		min_residency = k_us_to_ticks_ceil32(state->min_residency_us);
-		exit_latency = k_us_to_ticks_ceil32(state->exit_latency_us);
+		//printk("max_latency_ticks = %d ,min_residency_us = %d, exit_latency_us = %d\n", max_latency_ticks, state->min_residency_us, state->exit_latency_us);
+		min_residency = k_us_to_ticks_ceil32(state->min_residency_us); //240000
+		exit_latency = k_us_to_ticks_ceil32(state->exit_latency_us); //0
 
 		/* skip state if it brings too much latency */
-		if ((max_latency_ticks != K_TICKS_FOREVER) &&
+		if ((max_latency_ticks != K_TICKS_FOREVER /* -1 */) &&
 		    (exit_latency >= max_latency_ticks)) {
 			continue;
 		}

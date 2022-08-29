@@ -15,6 +15,9 @@ __weak const struct pm_state_info *pm_policy_next_state(uint8_t cpu, int32_t tic
 
 	num_cpu_states = pm_state_cpu_get_all(cpu, &cpu_states);
 
+	//printk("num_cpu_states %d (== 1)\n", num_cpu_states);
+	//printk("ticks %d\n", ticks);
+
 	for (int16_t i = (int16_t)num_cpu_states - 1; i >= 0; i--) {
 		const struct pm_state_info *state = &cpu_states[i];
 

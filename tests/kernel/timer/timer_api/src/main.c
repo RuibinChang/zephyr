@@ -794,7 +794,7 @@ ZTEST_USER(timer_api, test_sleep_abs)
 	k_usleep(1); /* tick align */
 
 	start = k_uptime_ticks();
-	k_sleep(K_TIMEOUT_ABS_TICKS(start + sleep_ticks));
+	k_sleep(K_TIMEOUT_ABS_TICKS(start + sleep_ticks)); //+start?
 	end = k_uptime_ticks();
 
 	/* Systems with very high tick rates and/or slow idle resume
