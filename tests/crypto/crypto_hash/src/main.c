@@ -7,7 +7,9 @@
 #include <zephyr/ztest.h>
 #include <zephyr/crypto/crypto.h>
 
-#define CRYPTO_DRV_NAME CONFIG_CRYPTO_MBEDTLS_SHIM_DRV_NAME
+//define CRYPTO_DRV_NAME CONFIG_CRYPTO_MBEDTLS_SHIM_DRV_NAME
+//define CRYPTO_DEV_COMPAT ite_it8xxx2_sha
+#define CRYPTO_DEV_COMPAT ite_it8xxx2_sha_v2
 
 /* Following test are part of mbedTLS */
 
@@ -128,7 +130,8 @@ ZTEST_USER(crypto_hash, test_hash)
 {
 	int ret;
 	struct hash_ctx ctx;
-	const struct device *dev = device_get_binding(CRYPTO_DRV_NAME);
+	//const struct device *dev = device_get_binding(CRYPTO_DRV_NAME);
+	const struct device *const dev = DEVICE_DT_GET_ONE(CRYPTO_DEV_COMPAT);
 
 	ctx.flags = CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS;
 

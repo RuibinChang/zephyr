@@ -76,6 +76,7 @@ static bool __maybe_unused is_block_aligned(const void *const p)
 	return ((uintptr_t)p & (ILM_BLOCK_SIZE - 1)) == 0;
 }
 
+#if 1
 static int it8xxx2_configure_ilm_block(const struct ilm_config *const config, void *ram_addr,
 				       const void *flash_addr, const size_t copy_sz)
 {
@@ -121,9 +122,11 @@ static int it8xxx2_configure_ilm_block(const struct ilm_config *const config, vo
 	irq_unlock(irq_key);
 	return 0;
 }
+#endif
 
 static int it8xxx2_ilm_init(const struct device *dev)
 {
+#if 1
 	/* Invariants enforced by the linker script */
 	__ASSERT(is_block_aligned(__ilm_ram_start),
 		 "ILM physical base address (%p) must be 4k-aligned", __ilm_ram_start);
@@ -151,6 +154,7 @@ static int it8xxx2_ilm_init(const struct device *dev)
 			return rv;
 		}
 	}
+#endif
 
 	return 0;
 }

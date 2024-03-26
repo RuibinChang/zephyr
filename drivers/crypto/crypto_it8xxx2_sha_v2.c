@@ -44,7 +44,7 @@ BUILD_ASSERT(DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 1,
 
 #define SHA_SHA256_HASH_LEN                32
 #define SHA_SHA256_BLOCK_LEN               64
-#define SHA_SHA256_SRAM_BUF                1024
+#define SHA_SHA256_SRAM_BUF                1024 /*512*/
 #define SHA_SHA256_HASH_LEN_WORDS          (SHA_SHA256_HASH_LEN / sizeof(uint32_t))
 #define SHA_SHA256_BLOCK_LEN_WORDS         (SHA_SHA256_BLOCK_LEN / sizeof(uint32_t))
 #define SHA_SHA256_SRAM_BUF_WORDS          (SHA_SHA256_SRAM_BUF / sizeof(uint32_t))
@@ -165,6 +165,7 @@ static int it8xxx2_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
 			}
 
 			/* HW automatically load 1KB data from DLM */
+			/*sys_write8(IT8XXX2_SHAEXEC_512Byte,*/
 			sys_write8(IT8XXX2_SHAEXEC_1KByte,
 					IT8XXX2_SHA_REGS_BASE + IT8XXX2_REG_SHAECR);
 			ret = it8xxx2_sha256_module_calculation();
