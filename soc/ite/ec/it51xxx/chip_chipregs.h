@@ -269,6 +269,73 @@ enum chip_pll_mode {
 
 /**
  *
+ * (1Fxxh) External Timer & External Watchdog (ETWD)
+ *
+ */
+#define IT51XXX_EXT_TIMER_BASE ((struct timer_it51xxx_regs *)DT_REG_ADDR(DT_NODELABEL(timer)))
+
+#ifndef __ASSEMBLER__
+struct timer_it51xxx_regs {
+	/* 0x00: External Timer Configuration 2 */
+	volatile uint8_t ETWCFG2;
+	/* 0x01-0x04: Reserved_01_04 */
+	volatile uint8_t reserved_01_04[4];
+	/* 0x05: External Control */
+	volatile uint8_t ETWCTRL;
+	/* 0x06-0x09: Reserved_06_09 */
+	volatile uint8_t reserved_06_09[4];
+	/* 0x0a: External Timer 2 Prescaler */
+	volatile uint8_t ET2PSR;
+	/* 0x0b: External Timer 2 Counter High Byte */
+	volatile uint8_t ET2CNTLHR;
+	/* 0x0c: External Timer 2 Counter Low Byte */
+	volatile uint8_t ET2CNTLLR;
+	/* 0x0d: reserved_0d */
+	volatile uint8_t reserved_0d[1];
+	/* 0x0e: External Timer 2 Counter High Byte 2 */
+	volatile uint8_t ET2CNTLH2R;
+	/* 0x0f: reserved_0f */
+	volatile uint8_t reserved_0f[1];
+	/* 0x10: External Timer 3 Prescaler */
+	volatile uint8_t ET3PSR;
+	/* 0x11: External Timer 3 Counter High Byte */
+	volatile uint8_t ET3CNTLHR;
+	/* 0x12: External Timer 3 Counter Low Byte */
+	volatile uint8_t ET3CNTLLR;
+	/* 0x13: External Timer 3 Counter High Byte 2 */
+	volatile uint8_t ET3CNTLH2R;
+	/* 0x14: External Timer 4 Prescaler */
+	volatile uint8_t ET4PSR;
+	/* 0x15: reserved_15 */
+	volatile uint8_t reserved_15[1];
+	/* 0x16: External Timer 4 Counter Low Byte */
+	volatile uint8_t ET4CNTLLR;
+	/* 0x17-0x20: Reserved_17_20 */
+	volatile uint8_t reserved_17_20[10];
+	/* 0x21: External Timer Terminal Count Write Clear */
+	volatile uint8_t ETTMLCNTWCR;
+};
+
+enum ext_clk_src_sel {
+	EXT_PSR_32P768K = 0,
+	EXT_PSR_1P024K,
+	EXT_PSR_32,
+	EXT_PSR_EC_CLK,
+};
+/*
+ * 24-bit timers: external timer 2
+ */
+enum ext_timer_idx {
+	EXT_TIMER_2 = 0, /* Event timer */
+};
+#endif /* __ASSEMBLER__ */
+
+/* ETWD register fields */
+/* 0x05: External Control */
+#define IT51XXX_ETWD_ET2RST  BIT(2)
+
+/**
+ *
  * (20xxh) General Control (GCTRL) registers
  *
  */

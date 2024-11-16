@@ -948,6 +948,13 @@
 			#wuc-cells = <1>;
 		};
 
+		timer: timer@f01f00 {
+			compatible = "ite,it51xxx-timer";
+			reg = <0x00f01f00 0x22>;
+			interrupts = <IT51XXX_IRQ_TIMER2 IRQ_TYPE_EDGE_RISING>; /* Event timer */
+			interrupt-parent = <&intc>;
+		};
+
 		gctrl: general-control@f02000 {
 			compatible = "ite,it51xxx-gctrl";
 			reg = <0x00f02000 0x100>;
