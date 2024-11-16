@@ -7,6 +7,14 @@
 #include <soc_common.h>
 #include <zephyr/kernel.h>
 
+void soc_prep_hook(void)
+{
+	struct gctrl_it51xxx_regs *const gctrl_regs = GCTRL_IT51XXX_REGS_BASE;
+
+	/* Scratch ROM0 is 4kb size */
+	gctrl_regs->GCTRL_SCR0SZR = IT51XXX_GCTRL_SCRSIZE_4K;
+}
+
 void chip_pll_ctrl(enum chip_pll_mode mode)
 {
 	struct ecpm_it51xxx_regs *const ecpm_regs = ECPM_IT51XXX_REGS_BASE;
