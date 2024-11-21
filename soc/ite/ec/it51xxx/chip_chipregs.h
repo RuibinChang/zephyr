@@ -243,21 +243,32 @@ struct ecpm_it51xxx_regs {
 	volatile uint8_t CGCTRL3R;
 	/* 0x06: PLL Frequency */
 	volatile uint8_t PLLFREQR;
-	/* 0x07: Reserved2 */
+	/* 0x07: PLL SSC Control */
+	volatile uint8_t PLLSSCR;
+	/* 0x08: Reserved2 */
 	volatile uint8_t reserved2;
-	/* 0x08: PLL Clock Source Status */
-	volatile uint8_t PLLCSS;
 	/* 0x09: Clock Gating Control 4 */
 	volatile uint8_t CGCTRL4R;
 };
 #endif /* !__ASSEMBLER__ */
 
 /* ECPM register fields */
+/* 0x02: CLOCK Gating Control 2 */
+#define IT51XXX_ECPM_CIRCG    BIT(5)
+#define IT51XXX_ECPM_SWUCCG   BIT(4)
 /* 0x04: Auto CLOCK Gating */
 #define IT51XXX_ECPM_AUART1CG BIT(6)
 #define IT51XXX_ECPM_AUART2CG BIT(5)
-/* 0x05: Clock Gating Control 3 */
+#define IT51XXX_ECPM_ASSPICG  BIT(4)
+#define IT51XXX_ECPM_ACIRCG   BIT(2)
+/* 0x05: CLOCK Gating Control 3 */
+#define IT51XXX_ECPM_PECICG   BIT(3)
 #define IT51XXX_ECPM_UART12CG BIT(2)
+#define IT51XXX_ECPM_SSPICG   BIT(1)
+#define IT51XXX_ECPM_DBGRCG   BIT(0)
+/* 0x05: CLOCK Gating Control 4 */
+#define IT51XXX_ECPM_CEC1CG   BIT(1)
+#define IT51XXX_ECPM_CEC0CG   BIT(0)
 
 #ifndef __ASSEMBLER__
 enum chip_pll_mode {
