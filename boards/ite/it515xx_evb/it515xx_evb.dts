@@ -16,6 +16,7 @@
 
 	aliases {
 		led0 = &led0;
+		kscan0 = &kscan_input;
 	};
 
 	chosen {
@@ -25,7 +26,7 @@
 		zephyr,flash = &flash0;
 		zephyr,flash-controller = &flashctrl;
 		zephyr,code-partition = &slot0_partition;
-
+		zephyr,keyboard-scan = &kscan_input;
 	};
 
 	leds {
@@ -67,5 +68,40 @@
 			label = "storage";
 			reg = <0x00040000 DT_SIZE_K(256)>;
 		};
+	};
+};
+
+&kbd {
+	status = "okay";
+	pinctrl-0 = <&ksi0_gpn0_default
+		     &ksi1_gpn1_default
+		     &ksi2_gpn2_default
+		     &ksi3_gpn3_default
+		     &ksi4_gpn4_default
+		     &ksi5_gpn5_default
+		     &ksi6_gpn6_default
+		     &ksi7_gpn7_default
+		     &kso0_gpk0_default
+		     &kso1_gpk1_default
+		     &kso2_gpk2_default
+		     &kso3_gpk3_default
+		     &kso4_gpk4_default
+		     &kso5_gpk5_default
+		     &kso6_gpk6_default
+		     &kso7_gpk7_default
+		     &kso8_gpl0_default
+		     &kso9_gpl1_default
+		     &kso10_gpl2_default
+		     &kso11_gpl3_default
+		     &kso12_gpl4_default
+		     &kso13_gpl5_default
+		     &kso14_gpl6_default
+		     &kso15_gpl7_default>;
+	pinctrl-names = "default";
+	row-size = <8>;
+	col-size = <16>;
+
+	kscan_input: kscan-input {
+		compatible = "zephyr,kscan-input";
 	};
 };
