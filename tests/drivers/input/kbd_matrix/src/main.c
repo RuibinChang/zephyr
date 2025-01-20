@@ -11,7 +11,7 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/ztest.h>
 
-#define TEST_KBD_SCAN_NODE DT_INST(0, test_kbd_scan)
+#define TEST_KBD_SCAN_NODE DT_NODELABEL(kbd)
 
 /* test driver */
 
@@ -57,9 +57,10 @@ static const struct input_kbd_matrix_common_config
 
 static struct input_kbd_matrix_common_data test_data;
 
-DEVICE_DT_DEFINE(TEST_KBD_SCAN_NODE, input_kbd_matrix_common_init, NULL,
-		 &test_data, &test_cfg,
-		 POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, NULL);
+//multiple definition (declare in input driver), so mark it
+//DEVICE_DT_DEFINE(TEST_KBD_SCAN_NODE, input_kbd_matrix_common_init, NULL,
+//		 &test_data, &test_cfg,
+//		 POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, NULL);
 
 static const struct device *const test_dev = DEVICE_DT_GET(TEST_KBD_SCAN_NODE);
 

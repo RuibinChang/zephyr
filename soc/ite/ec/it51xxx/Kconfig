@@ -9,8 +9,7 @@ config SOC_SERIES_IT51XXX
 
 if SOC_SERIES_IT51XXX
 
-# Avoid EC crash
-# select RISCV_ISA_EXT_C
+# delete select RISCV_ISA_EXT_C to avoid EC crash
 config SOC_IT51XXX
 	select RISCV
 	select ATOMIC_OPERATIONS_C

@@ -99,7 +99,8 @@
 		     &kso15_gpl7_default>;
 	pinctrl-names = "default";
 	row-size = <8>;
-	col-size = <16>;
+	col-size = <3>; /* The test only supports a 3 column matrix */
+	no-ghostkey-check;
 
 	kscan_input: kscan-input {
 		compatible = "zephyr,kscan-input";
