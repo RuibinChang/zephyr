@@ -13,10 +13,11 @@
 static const struct device *kscan_dev = DEVICE_DT_GET(
 		DT_NODELABEL(kscan_input));
 static const struct device *input_dev = DEVICE_DT_GET(
-		DT_NODELABEL(fake_input_device));
+		DT_NODELABEL(kbd));
 
-DEVICE_DT_DEFINE(DT_INST(0, vnd_input_device), NULL, NULL, NULL, NULL,
-		 PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, NULL);
+//multiple definition (declare in input driver), so mark it
+//DEVICE_DT_DEFINE(DT_INST(0, ite_it51xxx_kbd), NULL, NULL, NULL, NULL,
+//		 PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, NULL);
 
 static struct {
 	uint32_t row;
