@@ -9,6 +9,7 @@
 #include <soc.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/irq.h>
+#include <stdio.h>
 
 #include <zephyr/logging/log.h>
 #define LOG_LEVEL CONFIG_WDT_LOG_LEVEL
@@ -95,6 +96,17 @@ static int wdt_it51xxx_install_timeout(const struct device *dev,
 	/* mark installed */
 	data->timeout_installed = true;
 
+	printf("install(): return 0\n");
+	for (char i = 1; i <= 9; i++) {
+		uint8_t reg_val = sys_read8(base + i);
+		printf("8%dh 0x%x, ", i, reg_val);
+	}
+	printf("\n");
+	uint32_t ext1_obv = sys_read16(base + 0x10);
+	uint32_t wdt_obv = sys_read16(base + 0x18);
+
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
+
 	return 0;
 }
 
@@ -110,6 +122,8 @@ static int wdt_it51xxx_setup(const struct device *dev, uint8_t options)
 
 	/* disable pre-warning timer1 interrupt */
 	irq_disable(DT_INST_IRQN(0));
+
+	printf("setup(): ");
 
 	if (!data->timeout_installed) {
 		LOG_ERR("No valid WDT timeout installed");
@@ -156,8 +170,32 @@ static int wdt_it51xxx_setup(const struct device *dev, uint8_t options)
 	 */
 	sys_write8((WDT_EWDKEYEN | WDT_EWDSRC | WDT_LEWDCNTL | WDT_LET1PS), base + REG_ETWCFG);
 
-	LOG_DBG("WDT Setup and enabled");
+	printf("WDT Setup and enabled\n");
+	for (char i = 1; i <= 9; i++) {
+		reg_val = sys_read8(base + i);
+		printf("8%dh 0x%x, ", i, reg_val);
+	}
+	printf("\n");
+	uint32_t ext1_obv = sys_read16(base + 0x10);
+	uint32_t wdt_obv = sys_read16(base + 0x18);
 
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
+
+	ext1_obv = sys_read16(base + 0x10);
+	wdt_obv = sys_read16(base + 0x18);
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
+
+	ext1_obv = sys_read16(base + 0x10);
+	wdt_obv = sys_read16(base + 0x18);
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
+
+	ext1_obv = sys_read16(base + 0x10);
+	wdt_obv = sys_read16(base + 0x18);
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
+
+	ext1_obv = sys_read16(base + 0x10);
+	wdt_obv = sys_read16(base + 0x18);
+	printf("ext1_obv 0x%x, wdt_obv 0x%x\n", ext1_obv, wdt_obv);
 	return 0;
 }
 
@@ -200,7 +238,7 @@ static int wdt_it51xxx_feed(const struct device *dev, int channel_id)
 		irq_enable(DT_INST_IRQN(0));
 	}
 
-	LOG_DBG("WDT Kicking");
+	printf("feed(): WDT Kicking\n");
 
 	return 0;
 }
@@ -226,7 +264,7 @@ static int wdt_it51xxx_disable(const struct device *dev)
 	/* mark uninstalled */
 	data->timeout_installed = false;
 
-	LOG_DBG("WDT Disabled");
+	printf("disable(): WDT Disabled\n");
 
 	return 0;
 }
@@ -269,7 +307,7 @@ static void wdt_it51xxx_isr(const struct device *dev)
 	}
 	data->wdt_warning_fired++;
 
-	LOG_DBG("WDT ISR");
+	printf("WDT ISR\n");
 }
 
 static DEVICE_API(wdt, wdt_it51xxx_api) = {
