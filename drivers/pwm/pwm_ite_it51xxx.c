@@ -51,6 +51,12 @@ LOG_MODULE_REGISTER(pwm_ite_it51xxx, CONFIG_PWM_LOG_LEVEL);
 #define REG_PWM_GCTRL            0x70
 #define PWM_PCCE                 BIT(1)
 
+#if 0 /* Confirm for loop 0x3FF -> 0x64 spending times by GPA1: 1.6ms */
+#define IT51XXX_GPIO_BASE       0x00F05000
+#define IT51XXX_GPIO_GPA1CR0    ECREG(IT51XXX_GPIO_BASE + 0x02)
+#define IT51XXX_GPIO_GPA1CR1    ECREG(IT51XXX_GPIO_BASE + 0x03)
+#endif
+
 struct pwm_it51xxx_cfg {
 	/* PWM channel register base address */
 	uintptr_t base_ch;
@@ -83,6 +89,9 @@ static void pwm_enable(const struct device *dev, int enabled)
 		reg_val = sys_read8(base_ch + REG_PWM_CH_CTRL0);
 		sys_write8(reg_val | PWM_CH_PCSG, base_ch + REG_PWM_CH_CTRL0);
 	}
+
+	reg_val = sys_read8(base_ch + REG_PWM_CH_CTRL0);
+	printk("enable(): ch 0x%lx, 04h CTRL0 0x%x (bit[1] = 1b gating)\n", base_ch, reg_val);
 }
 
 static int pwm_it51xxx_get_cycles_per_sec(const struct device *dev, uint32_t channel,
@@ -107,6 +116,8 @@ static int pwm_it51xxx_get_cycles_per_sec(const struct device *dev, uint32_t cha
 	 */
 	*cycles = (uint64_t)PWM_FREQ;
 
+	printk("get_cyc(): PWM_FREQ %lld\n", *cycles);
+
 	return 0;
 }
 
@@ -118,9 +129,9 @@ static int pwm_it51xxx_set_cycles(const struct device *dev, uint32_t channel,
 	const uintptr_t base_prs = config->base_prs;
 	struct pwm_it51xxx_data *data = dev->data;
 	int prs_sel = config->prs_sel;
-	uint32_t actual_freq = 0xffffffff, target_freq, deviation, dc_val;
+	uint32_t actual_freq = 0xffffffff, target_freq, deviation, dc_val, temp;
 	uint64_t pwm_clk_src;
-	uint8_t reg_val;
+	uint8_t reg_val, reg_val_;
 
 	/* Select PWM inverted polarity (ex. active-low pulse) */
 	if (flags & PWM_POLARITY_INVERTED) {
@@ -197,6 +208,10 @@ static int pwm_it51xxx_set_cycles(const struct device *dev, uint32_t channel,
 	if (target_freq != data->target_freq_prev) {
 		uint32_t ctx, pxc;
 
+#if 0 /* Confirm for loop 0x3FF -> 0x64 spending times by GPA1 */
+		/* GPA1 output high */
+		IT51XXX_GPIO_GPA1CR1 = 0x01;
+#endif
 		for (ctx = 0x3FF; ctx >= PWM_CTX_MIN; ctx--) {
 			pxc = (((uint32_t)pwm_clk_src) / (ctx + 1) / target_freq);
 			/*
@@ -212,7 +227,10 @@ static int pwm_it51xxx_set_cycles(const struct device *dev, uint32_t channel,
 				}
 			}
 		}
-
+#if 0 /* Confirm for loop 0x3FF -> 0x64 spending times by GPA1 */
+		/* GPA1 output low */
+		IT51XXX_GPIO_GPA1CR1 = 0x00;
+#endif
 		if (pxc > UINT16_MAX) {
 			LOG_ERR("PWM prescaler PxC only support 2 bytes !");
 			return -EINVAL;
@@ -248,7 +266,15 @@ static int pwm_it51xxx_set_cycles(const struct device *dev, uint32_t channel,
 	/* Store the frequency to be compared */
 	data->target_freq_prev = target_freq;
 
-	LOG_DBG("clock source freq %d, target freq %d", (uint32_t)pwm_clk_src, target_freq);
+	reg_val = sys_read8(base_ch + REG_PWM_CH_CTRL0);
+	temp = sys_read8(base_ch + REG_PWM_CH_SPS);
+	reg_val_ = sys_read8(base_prs + REG_PWM_PXCSS_L(prs_sel));
+	printk("set_cyc(): ch 0x%lx, 04h CTRL0 0x%x, prs_sel %d = 05h SPS 0x%x, 86/8A/8Eh PXCSS 0x%x (00b=32768Hz, 01b=EC 9.2MHz)\n", base_ch, reg_val, prs_sel, temp, reg_val_);
+
+	printk("clock source freq %d, target freq %d\n", (uint32_t) pwm_clk_src, target_freq);
+
+	temp = sys_read16(base_ch + REG_PWM_CH_DC_L);
+	printk("pxc 0x%x (16bit), ctx 0x%x (10bit), duty cyc 0x%x (10bit)\n", data->pxc, data->ctx, temp);
 
 	return 0;
 }
@@ -260,7 +286,7 @@ static int pwm_it51xxx_init(const struct device *dev)
 	const uintptr_t base_prs = config->base_prs;
 	int prs_sel = config->prs_sel;
 	int status;
-	uint8_t reg_val;
+	uint8_t reg_val, reg_val_;
 
 	/* PWM channel clock source gating before configuring */
 	pwm_enable(dev, 0);
@@ -285,6 +311,29 @@ static int pwm_it51xxx_init(const struct device *dev)
 		return status;
 	}
 
+	reg_val = sys_read8(base_ch + REG_PWM_CH_SPS);
+	reg_val_ = sys_read8(base_prs + REG_PWM_PXCSS_L(prs_sel));
+	printk("init(): ch 0x%lx, prs_sel %d = 05h SPS 0x%x, 86/8A/8Eh PXCSS 0x%x (00b=32768Hz, 01b=EC 9.2MHz)\n", base_ch, prs_sel, reg_val, reg_val_);
+
+#if 0 /* Confirm for loop 0x3FF -> 0x64 spending times by GPA1: 1.6ms */
+	/* Only do this after pwm7 init done */
+	if (base_ch == 0x00f04670) {
+		/* Disable global interrupt for critical section */
+		unsigned int key = irq_lock();
+
+		IT51XXX_GPIO_GPA1CR0 = 0x40;
+
+		/*
+		 * target_freq 91089Hz = 9200000 / period_cycles, period_cycles = 101
+		 * Duty 50%, pulse_cycles = 101 * 50% = 50
+		 * => pxc = 1, ctx = 100
+		 */
+		pwm_it51xxx_set_cycles(dev, 7/*no used*/, 101/*period*/, 50/*pulse*/, 0/*flag*/);
+
+		irq_unlock(key);
+	}
+#endif
+
 	return 0;
 }
 
@@ -307,7 +356,7 @@ static DEVICE_API(pwm, pwm_it51xxx_api) = {
 	static struct pwm_it51xxx_data pwm_it51xxx_data_##inst;                                    \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(inst, &pwm_it51xxx_init, NULL, &pwm_it51xxx_data_##inst,             \
-			      &pwm_it51xxx_cfg_##inst, PRE_KERNEL_1, CONFIG_PWM_INIT_PRIORITY,     \
+			      &pwm_it51xxx_cfg_##inst, PRE_KERNEL_1, 61,                           \
 			      &pwm_it51xxx_api);
 
 DT_INST_FOREACH_STATUS_OKAY(PWM_IT51XXX_INIT)
