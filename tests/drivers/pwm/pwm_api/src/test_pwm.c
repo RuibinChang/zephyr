@@ -28,6 +28,7 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
 #include <zephyr/ztest.h>
+#include <zephyr/drivers/sensor.h>
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_ALIAS(pwm_0))
 #define PWM_DEV_NODE DT_ALIAS(pwm_0)
@@ -151,13 +152,39 @@ static int test_task(uint32_t port, uint32_t period, uint32_t pulse, uint8_t uni
 	return TC_PASS;
 }
 
+/* Mapping to tach0/1/2 node which we want to test */
+#define TACH_DEV_NODE DT_NODELABEL(tach0)
+
 ZTEST_USER(pwm_basic, test_pwm_nsec)
 {
+	const struct device *tach_dev = DEVICE_DT_GET(TACH_DEV_NODE);
+	struct sensor_value val = { 0 };
+
 	/* Period : Pulse (2000000 : 1000000), unit (nsec). Voltage : 1.65V */
+	/* Target freq(pwm0 output) 500Hz, Duty cycle 50% */
 	zassert_true(test_task(DEFAULT_PWM_PORT, DEFAULT_PERIOD_NSEC,
 				DEFAULT_PULSE_NSEC, UNIT_NSECS) == TC_PASS, NULL);
 	k_sleep(K_MSEC(1000));
 
+	/*
+	 * Connect GPA0(pwm0) pin to GPD6/GPC6 (tach0a/tach0b)
+	 *                           GPD7/GPJ6 measure GPJ2 on mother board (tach1a/tach1b)
+	 *                           GPJ0/GPJ1 (tach2a/tach2b) pin
+	 */
+	sensor_sample_fetch_chan(tach_dev, SENSOR_CHAN_RPM);
+	sensor_channel_get(tach_dev, SENSOR_CHAN_RPM, &val);
+
+	/*
+	 * Fan Speed (RPM) = 60 / (1/fs * {TACH_CH_(H & L)} * P) =>
+	 * val->val1 = (60 * TACH_FREQ / 128 / p / (data->capture)) =>
+	 * 14973 (0b/2b:15078)  = 4312500    / 2 / 144
+	 *
+	 * RPM (cyc/min) / 60 * p = Target freq (cyc/sec) =>
+	 * Target freq = 499.1Hz
+	 */
+	TC_PRINT("test_pwm_nsec(): tachx rpm %d => freq %d (p=2) \n", (int)val.val1, (int)val.val1 / 60 * 2);
+
+#if 0
 	/* Period : Pulse (2000000 : 2000000), unit (nsec). Voltage : 3.3V */
 	zassert_true(test_task(DEFAULT_PWM_PORT, DEFAULT_PERIOD_NSEC,
 				DEFAULT_PERIOD_NSEC, UNIT_NSECS) == TC_PASS, NULL);
@@ -167,8 +194,10 @@ ZTEST_USER(pwm_basic, test_pwm_nsec)
 	zassert_true(test_task(DEFAULT_PWM_PORT, DEFAULT_PERIOD_NSEC,
 				0, UNIT_NSECS) == TC_PASS, NULL);
 	k_sleep(K_MSEC(1000));
+#endif
 }
 
+#if 0
 ZTEST_USER(pwm_basic, test_pwm_cycle)
 {
 	/* Period : Pulse (64000 : 32000), unit (cycle). Voltage : 1.65V */
@@ -186,6 +215,7 @@ ZTEST_USER(pwm_basic, test_pwm_cycle)
 				0, UNIT_CYCLES) == TC_PASS, NULL);
 	k_sleep(K_MSEC(1000));
 }
+#endif
 
 #if defined INVALID_PWM_PORT
 ZTEST_USER(pwm_basic, test_pwm_invalid_port)

@@ -103,9 +103,13 @@ static bool tach_ch_is_valid(const struct device *dev, int input_pin)
 	}
 
 	reg_val = sys_read8(base + REG_TACH_CH_CTRL1);
+
 	if (((reg_val & TACH_CH_SEL) == input_pin) && (reg_val & TACH_CH_DVS)) {
 		/* Input pin match register setting and tachometer data valid */
+		printk("fetch(): input_pin %d(0=A,1=B) data valid\n", input_pin);
 		return true;
+	} else {
+		printk("fetch(): input_pin %d(0=A,1=B) data invalid\n", input_pin);
 	}
 
 	return false;
@@ -166,6 +170,7 @@ static int tach_it51xxx_channel_get(const struct device *dev, enum sensor_channe
 
 	val->val2 = 0U;
 
+	printk("get(): RPM %d\n", val->val1);
 	return 0;
 }
 
@@ -201,6 +206,9 @@ static int tach_it51xxx_init(const struct device *dev)
 	sys_write8(reg_val | TACH_CH_DVS, base + REG_TACH_CH_CTRL1);
 
 	/* Tachometer sensor already start */
+	reg_val = sys_read8(base + REG_TACH_CH_CTRL1);
+	printk("init(): tach0/1/2 0x%lx(C0/D0/E0), %d(0=A, 1=B) = C6/D6/E6h CTRL1 0x%x (bit0 A/B), (bit1=0b)\n", base, input_pin, reg_val);
+	printk("pinctrl check GCR2/5 bit TACHx En\n");
 	return 0;
 }
 

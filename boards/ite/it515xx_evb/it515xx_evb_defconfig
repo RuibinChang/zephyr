@@ -17,3 +17,6 @@ CONFIG_GPIO=y
 
 # Clock Driver
 CONFIG_CLOCK_CONTROL=y
+
+# Tach Driver
+CONFIG_SENSOR=y
