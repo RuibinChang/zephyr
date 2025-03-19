@@ -96,6 +96,10 @@ static bool tach_ch_is_valid(const struct device *dev, int tach_ch)
 	case IT8XXX2_TACH_CHANNEL_A:
 		if ((*reg_tswctlr & mask) == dvs_bit) {
 			valid = true;
+			printk("data valid\n");
+
+		} else {
+			printk("data in-valid\n");
 		}
 		break;
 	case IT8XXX2_TACH_CHANNEL_B:
@@ -106,6 +110,8 @@ static bool tach_ch_is_valid(const struct device *dev, int tach_ch)
 	default:
 		break;
 	}
+
+	printk("dvs_bit 0x%x, mask 0x%x, reg_tswctlr 0x%x\n", dvs_bit, mask, *reg_tswctlr);
 
 	return valid;
 }
@@ -134,6 +140,7 @@ static int tach_it8xxx2_sample_fetch(const struct device *dev, enum sensor_chann
 			/* Only W/C tach 1 data valid status */
 			*reg_tswctlr = (*reg_tswctlr & ~IT8XXX2_PWM_T0DVS);
 		}
+		printk("WC reg_tswctlr 0x%x\n", *reg_tswctlr);
 	} else {
 		/* If channel data of tachometer isn't valid, then clear it */
 		data->capture = 0;
