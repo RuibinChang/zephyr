@@ -17,3 +17,6 @@ CONFIG_GPIO=y
 
 # Clock Driver
 CONFIG_CLOCK_CONTROL=y
+
+# Kscan Driver
+CONFIG_INPUT=y
