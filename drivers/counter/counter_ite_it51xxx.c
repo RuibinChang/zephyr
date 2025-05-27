@@ -151,7 +151,7 @@ static int counter_it51xxx_set_alarm(const struct device *dev, uint8_t chan_id,
 
 	/* Set alarm timer ticks */
 	sys_write32(alarm_cfg->ticks, config->base + REG_TIMER_ET7CNTLLR);
-	LOG_DBG("Set alarm timer ticks 0x%x", alarm_cfg->ticks);
+	//LOG_DBG("Set alarm timer ticks 0x%x", alarm_cfg->ticks);
 
 	ite_intc_isr_clear(config->alarm_irq);
 
@@ -160,6 +160,12 @@ static int counter_it51xxx_set_alarm(const struct device *dev, uint8_t chan_id,
 		   config->base + REG_TIMER_ET7CTRL);
 
 	irq_enable(config->alarm_irq);
+
+	volatile uint32_t temp;
+	temp = sys_read32(config->base + REG_TIMER_ET7CNTLLR);
+	LOG_DBG("ET7CNT 0x%x", temp);
+	temp = sys_read32(config->base + REG_TIMER_ET7CNTOLR); //dummy read
+	LOG_DBG("ET7OBV 0x%x", temp);
 
 	return 0;
 }
@@ -226,7 +232,7 @@ static int counter_it51xxx_set_top_value(const struct device *dev,
 
 	/* Set top timer ticks */
 	sys_write32(top_cfg->ticks, config->base + REG_TIMER_ET8CNTLLR);
-	LOG_DBG("Set top timer ticks 0x%x", top_cfg->ticks);
+	//LOG_DBG("Set top timer ticks 0x%x", top_cfg->ticks);
 
 	ite_intc_isr_clear(config->top_irq);
 
@@ -235,6 +241,12 @@ static int counter_it51xxx_set_top_value(const struct device *dev,
 		   config->base + REG_TIMER_ET8CTRL);
 
 	irq_enable(config->top_irq);
+
+	volatile uint32_t temp;
+	temp = sys_read32(config->base + REG_TIMER_ET8CNTLLR);
+	LOG_DBG("ET8CNT 0x%x", temp);
+	temp = sys_read32(config->base + REG_TIMER_ET8CNTOLR); //dummy read
+	LOG_DBG("ET8OBV 0x%x", temp);
 
 	return 0;
 }
@@ -263,7 +275,7 @@ static void counter_it51xxx_alarm_isr(const struct device *dev)
 
 		counter_it51xxx_get_value(dev, &ticks);
 
-		alarm_cb(dev, 0, ticks, user_data);
+		alarm_cb(dev, 0, ticks, user_data); //ticks = observ_cnt
 	}
 
 	counter_it51xxx_alarm_timer_disable(dev);
@@ -318,6 +330,20 @@ static int counter_it51xxx_init(const struct device *dev)
 	LOG_DBG("Max top timer ticks = 0x%x", config->info.max_top_value);
 	LOG_DBG("Clock frequency = %d", config->info.freq);
 	LOG_DBG("Channels = %d", config->info.channels);
+
+	volatile uint32_t temp = sys_read8(config->base + REG_TIMER_ET7CTRL);
+	LOG_DBG("init:  ET7CTRL 0x%x (0x0)", temp);
+	temp = sys_read8(config->base + REG_TIMER_ET7PSR);
+	LOG_DBG("ET7PSR 0x%x (0x0)", temp);
+	temp = sys_read32(config->base + REG_TIMER_ET7CNTLLR);
+	LOG_DBG("ET7CNT 0x%x (0xffffff)", temp);
+
+	temp = sys_read8(config->base + REG_TIMER_ET8CTRL);
+	LOG_DBG("ET8CTRL 0x%x (0x0)", temp);
+	temp = sys_read8(config->base + REG_TIMER_ET8PSR);
+	LOG_DBG("ET8PSR 0x%x (0x0)", temp);
+	temp = sys_read32(config->base + REG_TIMER_ET8CNTLLR);
+	LOG_DBG("ET8CNT 0x%x (0xffffffff)", temp);
 
 	return 0;
 }
