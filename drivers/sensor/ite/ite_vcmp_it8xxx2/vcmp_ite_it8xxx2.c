@@ -28,6 +28,16 @@ LOG_MODULE_REGISTER(vcmp_ite_it8xxx2, CONFIG_SENSOR_LOG_LEVEL);
 #define VCMP_MAX_MVOLT		3000
 #endif
 
+#define ECREG(x)         (*((volatile unsigned char *)(x)))
+#define EC_REG_BASE_ADDR 0x00f00000
+
+#define IT8XXX2_GPIO_GPDRA  ECREG(EC_REG_BASE_ADDR + 0x1601)
+#define IT8XXX2_GPA1_HIGH   (IT8XXX2_GPIO_GPDRA | 0x02)
+#define IT8XXX2_GPA1_LOW    (IT8XXX2_GPIO_GPDRA & (uint8_t)~0x02)
+
+#define IT8XXX2_GPIO_A1_GPCR   ECREG(EC_REG_BASE_ADDR + 0x1611)
+#define IT8XXX2_GPIO_A1_OUTPUT ((IT8XXX2_GPIO_A1_GPCR & 0x3F) | 0x40)
+
 /* Device config */
 struct vcmp_it8xxx2_config {
 	/* Voltage comparator x control register */
@@ -126,7 +136,7 @@ static int vcmp_set_threshold(const struct device *dev,
 	volatile uint8_t *reg_vcmpxctl = config->reg_vcmpxctl;
 
 	if (reg_val >= VCMP_RESOLUTION) {
-		LOG_ERR("Vcmp%d threshold only support 10-bits", config->vcmp_ch);
+		printk("Vcmp%d threshold only support 10-bits", config->vcmp_ch);
 		return -ENOTSUP;
 	}
 
@@ -141,6 +151,7 @@ static int vcmp_set_threshold(const struct device *dev,
 	} else {
 		*reg_vcmpxctl &= ~IT8XXX2_VCMP_GREATER_THRESHOLD;
 	}
+	printk("Attr set(THRES): Vcmp%d *reg_vcmpxthrdat(M,L) = 0x%x %x, *reg_vcmpxctl = 0x%x(bit5 1 = >) \n", config->vcmp_ch, *reg_vcmpxthrdatm, *reg_vcmpxthrdatl, *reg_vcmpxctl);
 
 	return 0;
 }
@@ -162,6 +173,8 @@ static int vcmp_ite_it8xxx2_attr_set(const struct device *dev,
 {
 	const struct vcmp_it8xxx2_config *const config = dev->config;
 	int32_t reg_val, ret = 0;
+	volatile uint8_t *reg_vcmpxctl = config->reg_vcmpxctl;
+	volatile uint8_t *reg_vcmpsts = (uint8_t *)config->reg_vcmpsts;
 
 	if (chan != SENSOR_CHAN_VOLTAGE) {
 		return -ENOTSUP;
@@ -189,6 +202,7 @@ static int vcmp_ite_it8xxx2_attr_set(const struct device *dev,
 			vcmp_enable(dev, 0);
 			clear_vcmp_status(dev, config->vcmp_ch);
 		}
+		printk("Attr set(ALERT): Vcmp%d *reg_vcmpsts = 0x%x(bit0,1,2 0b), *reg_vcmpxctl = 0x%x(bit7 1 = En, bit6 1 = En INT) \n", config->vcmp_ch, *reg_vcmpsts, *reg_vcmpxctl);
 
 		break;
 	default:
@@ -215,6 +229,8 @@ static int vcmp_ite_it8xxx2_trigger_set(const struct device *dev,
 
 	vcmp_work_addr[config->vcmp_ch] = (uint32_t) &data->work;
 
+	printk("trigger set(): Vcmp ch%d \n", config->vcmp_ch);
+
 	return 0;
 }
 
@@ -235,6 +251,22 @@ static int vcmp_it8xxx2_channel_get(const struct device *dev,
 	val->val1 = config->vcmp_ch;
 
 	return 0;
+}
+
+static void sensor_trigger_cb(const struct device *dev,
+			      const struct sensor_trigger *trigger)
+{
+	const struct vcmp_it8xxx2_config *const config = dev->config;
+	int vcmp_ch = config->vcmp_ch;
+	ARG_UNUSED(trigger);
+
+	printk("Vcmp%d cb function \n", vcmp_ch);
+
+	if (vcmp_ch == 0) {
+		vcmp_enable(dev, 0); //actually should call vcmp_ite_it8xxx2_attr_set() api
+	} else if (vcmp_ch == 1) {
+		vcmp_enable(dev, 0); //actually should call vcmp_ite_it8xxx2_attr_set() api
+	}
 }
 
 /*
@@ -260,7 +292,10 @@ static void vcmp_it8xxx2_isr(const struct device *dev)
 				k_work_submit_to_queue(work_q,
 						       (struct k_work *) vcmp_work_addr[idx]);
 #else
+				/* k_work_submit() takes about 180us  */
+				IT8XXX2_GPIO_GPDRA = IT8XXX2_GPA1_HIGH;
 				k_work_submit((struct k_work *) vcmp_work_addr[idx]);
+				IT8XXX2_GPIO_GPDRA = IT8XXX2_GPA1_LOW;
 #endif
 			}
 			/* W/C voltage comparator specific channel interrupt status */
@@ -280,6 +315,9 @@ static int vcmp_it8xxx2_init(const struct device *dev)
 	volatile uint8_t *reg_vcmpxcselm = config->reg_vcmpxcselm;
 	volatile uint8_t *reg_vcmpscp = config->reg_vcmpscp;
 
+	IT8XXX2_GPIO_A1_GPCR = IT8XXX2_GPIO_A1_OUTPUT;
+
+	printk("Vcmp init(): Vcmp ch%d \n", config->vcmp_ch);
 	/* Disable voltage comparator specific channel before init */
 	vcmp_enable(dev, 0);
 
@@ -332,6 +370,15 @@ static int vcmp_it8xxx2_init(const struct device *dev)
 		val.val2 = 0;
 
 		vcmp_ite_it8xxx2_attr_set(dev, SENSOR_CHAN_VOLTAGE, attr, &val);
+
+		val.val1 = 1;
+		vcmp_ite_it8xxx2_attr_set(dev, SENSOR_CHAN_VOLTAGE, SENSOR_ATTR_ALERT, &val);
+
+		struct sensor_trigger trigger = {
+			.type = SENSOR_TRIG_THRESHOLD,
+			.chan = SENSOR_CHAN_VOLTAGE
+		};
+		vcmp_ite_it8xxx2_trigger_set(dev, &trigger, &sensor_trigger_cb);
 	}
 
 	/*
@@ -348,6 +395,10 @@ static int vcmp_it8xxx2_init(const struct device *dev)
 
 		irq_enable(config->irq);
 	}
+
+	printk("Vcmp init(): *reg_vcmpscp = 0x%x (600us = 0x40) \n", *reg_vcmpscp);
+	printk("Vcmp init(): *reg_vcmpxctl = 0x%x(bit0,1,2 = 011b), *reg_vcmpxcselm = 0x%x (0~7 = 0x0) \n", *reg_vcmpxctl, *reg_vcmpxcselm);
+	printk("Vcmp init(): IER18 = 0x%x(bit7 = 1b), ISR18 = 0x%x (bit7 = 0b) \n", IER18, ISR18);
 
 	return 0;
 }

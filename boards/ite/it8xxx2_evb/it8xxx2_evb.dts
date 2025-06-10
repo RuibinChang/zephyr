@@ -45,7 +45,7 @@
 	pinctrl-names = "default";
 };
 /* voltage comparator for test */
-&vcmp0 {
+&vcmp1 {
 	status = "okay";
 	scan-period = <IT8XXX2_VCMP_SCAN_PERIOD_600US>;
 	comparison = <IT8XXX2_VCMP_GREATER>;
