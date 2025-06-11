@@ -8,6 +8,7 @@
 
 #include <soc.h>
 #include <zephyr/drivers/counter.h>
+#include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(counter_it8xxx2, CONFIG_COUNTER_LOG_LEVEL);
 
@@ -90,7 +91,7 @@ static inline void counter_it8xxx2_alarm_timer_disable(const struct device *dev)
 
 static int counter_it8xxx2_start(const struct device *dev)
 {
-	LOG_DBG("starting top timer");
+	LOG_ERR("starting top timer");
 
 	counter_it8xxx2_write8(dev, ET_RST_EN, ET8CTRL);
 
@@ -208,7 +209,7 @@ static int counter_it8xxx2_set_top_value(const struct device *dev,
 		return -ENOTSUP;
 	}
 
-	LOG_DBG("setting top value to 0x%08x", top_cfg->ticks);
+	LOG_ERR("setting top value to 0x%08x", top_cfg->ticks);
 
 	data->top_callback = top_cfg->callback;
 	data->top_user_data = top_cfg->user_data;
@@ -234,6 +235,27 @@ static int counter_it8xxx2_set_top_value(const struct device *dev,
 static uint32_t counter_it8xxx2_get_top_value(const struct device *dev)
 {
 	return counter_it8xxx2_read32(dev, ET8CNTLLR);
+}
+
+//void *exp_user_data = (void *)199;
+//static volatile uint32_t top_cnt;
+static volatile uint32_t ticks_now;
+static volatile uint32_t ticks_last;
+static void top_handler(const struct device *dev, void *user_data)
+{
+	uint32_t dticks;
+
+	/* get free run observ (counting down, but we do read & ~, so it becomes counting up) */
+	ticks_now = sys_clock_cycle_get_32();
+	dticks = ticks_now - ticks_last;
+	/* print msg if we loss INT (overtime) */
+	if (dticks > (counter_it8xxx2_get_top_value(dev) + 1000/* 10% tolerance for running callback, tick = 30000us / 30us = 1000 */)) {
+		LOG_ERR("loss INT, ticks_last 0x%x, ticks_now 0x%x, dticks 0x%x (< 11000 = 0x2af8 tick)", ticks_last, ticks_now, dticks);
+	}
+	ticks_last = ticks_now;
+	//top_cnt++;
+	return;
+
 }
 
 static void counter_it8xxx2_alarm_isr(const struct device *dev)
@@ -308,6 +330,18 @@ static int counter_it8xxx2_init(const struct device *dev)
 	counter_it8xxx2_write32(dev, config->info.max_top_value, ET8CNTLLR);
 
 	config->irq_config_func(dev);
+
+	/* test: start top timer 300ms */
+	struct counter_top_cfg top_cfg = {
+		.ticks = counter_us_to_ticks(dev, 300000/*us*/),
+		.callback = top_handler,
+		//.user_data = exp_user_data,
+		.flags = 0
+	};
+
+	counter_it8xxx2_start(dev);
+	counter_it8xxx2_set_top_value(dev, &top_cfg);
+	ticks_last = sys_clock_cycle_get_32();
 
 	return 0;
 }
