@@ -671,7 +671,7 @@ static int i2c_enhance_pio_transfer(const struct device *dev,
 			data->err = ETIMEDOUT;
 			/* reset i2c port */
 			i2c_reset(dev);
-			LOG_ERR("I2C ch%d:0x%X reset cause %d",
+			LOG_ERR("pio trans I2C ch%d:0x%X reset cause %d",
 				config->port, data->addr_16bit, I2C_RC_TIMEOUT);
 			/* If this message is sent fail, drop the transaction. */
 			break;
@@ -872,7 +872,7 @@ static int i2c_enhance_cq_transfer(const struct device *dev,
 		data->err = ETIMEDOUT;
 		/* Reset i2c port. */
 		i2c_reset(dev);
-		LOG_ERR("I2C ch%d:0x%X reset cause %d",
+		LOG_ERR("cq trans I2C ch%d:0x%X reset cause %d",
 			config->port, data->addr_16bit, I2C_RC_TIMEOUT);
 	}
 
@@ -1345,7 +1345,7 @@ static int i2c_enhance_recover_bus(const struct device *dev)
 
 	/* reset i2c port */
 	i2c_reset(dev);
-	LOG_ERR("I2C ch%d reset cause %d", config->port,
+	LOG_ERR("recover I2C ch%d reset cause %d", config->port,
 		I2C_RC_NO_IDLE_FOR_START);
 
 	return 0;
