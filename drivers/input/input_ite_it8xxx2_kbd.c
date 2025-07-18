@@ -173,8 +173,8 @@ static int it8xxx2_kbd_init(const struct device *dev)
 		 * that pinctrl_apply_state() set to alternate function
 		 * immediately.
 		 */
-		gpio_pin_configure_dt(&config->kso16_gpios, GPIO_INPUT);
-		gpio_pin_configure_dt(&config->kso17_gpios, GPIO_INPUT);
+		gpio_pin_configure_dt(&config->kso16_gpios, (GPIO_OPEN_DRAIN | GPIO_PULL_UP | GPIO_OUTPUT));
+		gpio_pin_configure_dt(&config->kso17_gpios, (GPIO_OPEN_DRAIN | GPIO_PULL_UP | GPIO_OUTPUT));
 	}
 	/*
 	 * Enable the internal pull-up and kbs mode of the KSI[7:0] pins.
