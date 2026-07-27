@@ -28,6 +28,7 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
 #include <zephyr/ztest.h>
+#include <zephyr/dt-bindings/pwm/it51xxx_pwm.h>
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_ALIAS(pwm_test))
 #define PWM_DEV_NODE DT_ALIAS(pwm_test)
@@ -56,8 +57,11 @@ const struct device *get_pwm_device(void)
 	return DEVICE_DT_GET(PWM_DEV_NODE);
 }
 
+int ii = 0;
 static int test_task(uint32_t port, uint32_t period, uint32_t pulse, uint8_t unit)
 {
+	pwm_flags_t flags;
+
 	TC_PRINT("[PWM]: %" PRIu8 ", [period]: %" PRIu32 ", [pulse]: %" PRIu32 "\n",
 		port, period, pulse);
 
@@ -69,8 +73,15 @@ static int test_task(uint32_t port, uint32_t period, uint32_t pulse, uint8_t uni
 	}
 
 	if (unit == UNIT_CYCLES) {
+		if ((ii % 2) == 0) {
+			flags = PWM_IT51XXX_DIMMING_MODE;
+		} else {
+			flags = 0;
+		}
+		ii++;
+
 		/* Verify pwm_set_cycles() */
-		if (pwm_set_cycles(pwm_dev, port, period, pulse, 0)) {
+		if (pwm_set_cycles(pwm_dev, port, period, pulse, flags)) {
 			TC_PRINT("Fail to set the period and pulse width\n");
 			return TC_FAIL;
 		}

@@ -19,7 +19,7 @@
 		i2c-0 = &i2c0;
 		led0 = &led0;
 		watchdog0 = &twd0;
-		pwm-0 = &pwm0;
+		pwm-test = &pwm1;
 	};
 
 	chosen {
