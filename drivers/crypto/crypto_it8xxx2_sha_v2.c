@@ -155,8 +155,11 @@ static int it8xxx2_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
 	int ret;
 
 	while (rem_len) {
-		/* Data length >= 1KB */
-		if (rem_len >= SHA_SHA256_SRAM_BUF) {
+		/*
+		 * Data length >= 1KB && the buffer is empty.
+		 * (To prevent Out-of-Bounds Write when w_input_index > 0)
+		 */
+		if ((rem_len >= SHA_SHA256_SRAM_BUF) && (chip_ctx.w_input_index == 0)) {
 			rem_len = rem_len - SHA_SHA256_SRAM_BUF;
 
 			for (i = 0; i < SHA_SHA256_SRAM_BUF; i++) {
@@ -173,25 +176,36 @@ static int it8xxx2_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
 				return ret;
 			}
 		} else {
-			/* 0 <= Data length < 1KB */
-			while (rem_len) {
-				rem_len--;
+			/*
+			 * 0 <= Data length < 1KB || there is residual data
+			 * remaining in the buffer.
+			 * Now "only fill up to exactly 64 bytes". Once filled
+			 * and the hardware operation is triggered, w_input_index
+			 * resets to zero.
+			 */
+			uint32_t copy_len = SHA_SHA256_BLOCK_LEN - chip_ctx.w_input_index;
+			if (copy_len > rem_len) {
+				copy_len = rem_len;
+			}
+
+			for (i = 0; i < copy_len; i++) {
 				chip_ctx.w_input[chip_ctx.w_input_index++] =
-								pkt->in_buf[in_buf_idx++];
+					pkt->in_buf[in_buf_idx++];
+			}
+			rem_len -= copy_len;
 
-				/*
-				 * If fill full 64byte then execute HW calculation.
-				 * If not, will execute in later finish block.
-				 */
-				if (chip_ctx.w_input_index >= SHA_SHA256_BLOCK_LEN) {
-					/* HW automatically load 64Bytes data from DLM */
-					sys_write8(IT8XXX2_SHAEXEC_64Byte,
-							IT8XXX2_SHA_REGS_BASE + IT8XXX2_REG_SHAECR);
-					ret = it8xxx2_sha256_module_calculation();
+			/*
+			 * If fill full 64byte then execute HW calculation.
+			 * If not, will execute in later finish block.
+			 */
+			if (chip_ctx.w_input_index >= SHA_SHA256_BLOCK_LEN) {
+				/* HW automatically load 64Bytes data from DLM */
+				sys_write8(IT8XXX2_SHAEXEC_64Byte,
+					   IT8XXX2_SHA_REGS_BASE + IT8XXX2_REG_SHAECR);
+				ret = it8xxx2_sha256_module_calculation();
 
-					if (ret) {
-						return ret;
-					}
+				if (ret) {
+					return ret;
 				}
 			}
 		}
